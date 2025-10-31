@@ -67,10 +67,10 @@ APPROVED = environ.get("APPROVED_WELCOME", "on").lower()
 # ============================
 # MongoDB Configuration
 # ============================
-DATABASE_URI = environ.get('DATABASE_URI', "")
-DATABASE_URI2 = environ.get('DATABASE_URI2', "")
-DATABASE_NAME = environ.get('DATABASE_NAME', "Cluster0")
-COLLECTION_NAME = environ.get('COLLECTION_NAME', 'deathfiles')
+DATABASE_URI = environ.get('DATABASE_URI', "mongodb+srv://RB14goCNTApsB54I:RB14goCNTApsB54I@cluster0.8qjbx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+DATABASE_URI2 = environ.get('DATABASE_URI2', "mongodb+srv://hosoy42933:cgAc2eQk22JieEWn@cluster0.hb9xzjp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+DATABASE_NAME = environ.get('DATABASE_NAME', "moviefiles")
+COLLECTION_NAME = environ.get('COLLECTION_NAME', 'Deathcollections')
 
 # ============================
 # Movie Notification & Update Settings
@@ -91,18 +91,18 @@ HOW_TO_VERIFY = environ.get('HOW_TO_VERIFY', 'https://t.me/How_to_Download_7x/30
 # Link Shortener Configuration
 # ============================
 IS_SHORTLINK = bool(environ.get('IS_SHORTLINK', False))
-SHORTLINK_URL = environ.get('SHORTLINK_URL', '')
-SHORTLINK_API = environ.get('SHORTLINK_API', '')
+SHORTLINK_URL = environ.get('SHORTLINK_URL', 'Softurl.in')
+SHORTLINK_API = environ.get('SHORTLINK_API', '3ebfe6f558dc7fdcdcdeab913cb0109d6cafe097')
 TUTORIAL = environ.get('TUTORIAL', 'https://t.me/How_to_Download_7x/30')  # Tutorial video link for opening shortlink website
 IS_TUTORIAL = bool(environ.get('IS_TUTORIAL', False))
 
 # ============================
 # Channel & Group Links Configuration
 # ============================
-GRP_LNK = environ.get('GRP_LNK', 'https://t.me/movie7xchat')
-CHNL_LNK = environ.get('CHNL_LNK', 'https://t.me/nova_flix')
-OWNER_LNK = environ.get('OWNER_LNK', 'https://t.me/cosmic_freak')
-MOVIE_UPDATE_CHANNEL_LNK = environ.get('MOVIE_UPDATE_CHANNEL_LNK', 'https://t.me/nova_flix')
+GRP_LNK = environ.get('GRP_LNK', 'https://t.me/Death_Support')
+CHNL_LNK = environ.get('CHNL_LNK', 'https://t.me/Death_Movie')
+OWNER_LNK = environ.get('OWNER_LNK', 'https://t.me/DeathSupportbot')
+MOVIE_UPDATE_CHANNEL_LNK = environ.get('MOVIE_UPDATE_CHANNEL_LNK', 'https://t.me/Death_Movie')
 OWNERID = int(os.environ.get('OWNERID', '6893463477'))  # Replace with the actual admin ID
 
 # ============================
@@ -120,12 +120,12 @@ MAX_B_TN = environ.get("MAX_B_TN", "5")
 MAX_BTN = is_enabled((environ.get('MAX_BTN', "True")), True)
 PORT = environ.get("PORT", "8080")
 MSG_ALRT = environ.get('MSG_ALRT', 'sʜᴀʀᴇ ᴀɴᴅ sᴜᴘᴘᴏʀᴛ ᴜs')
-SUPPORT_CHAT = environ.get('SUPPORT_CHAT', 'https://t.me/codeflixsupport')  # Support group link (make sure bot is admin)
+SUPPORT_CHAT = environ.get('SUPPORT_CHAT', 'https://t.me/Death_Movies')  # Support group link (make sure bot is admin)
 P_TTI_SHOW_OFF = is_enabled((environ.get('P_TTI_SHOW_OFF', "False")), False)
 IMDB = is_enabled((environ.get('IMDB', "False")), False)
 AUTO_FFILTER = is_enabled((environ.get('AUTO_FFILTER', "True")), True)
 AUTO_DELETE = is_enabled((environ.get('AUTO_DELETE', "True")), True)
-DELETE_TIME = int(environ.get("DELETE_TIME", "300"))  #  deletion time in seconds (default: 5 minutes). Adjust as per your needs.
+DELETE_TIME = int(environ.get("DELETE_TIME", "1200"))  #  deletion time in seconds (default: 5 minutes). Adjust as per your needs.
 SINGLE_BUTTON = is_enabled((environ.get('SINGLE_BUTTON', "False")), False) # pm & Group button or link mode (True) / Off (False)
 CUSTOM_FILE_CAPTION = environ.get("CUSTOM_FILE_CAPTION", f"{script.CAPTION}")
 BATCH_FILE_CAPTION = environ.get("BATCH_FILE_CAPTION", CUSTOM_FILE_CAPTION)
