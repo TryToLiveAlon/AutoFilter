@@ -526,12 +526,6 @@ exᴀᴍᴘʟᴇ: /mongo ʏᴏᴜʀ_ᴍᴏɴɢᴏᴅʙ_ᴜʀʟ
 exᴀᴍᴘʟᴇ: /mongo ʏᴏᴜʀ_ᴍᴏɴɢᴏᴅʙ_ᴜʀʟ
 """
 
-    STREAM = """
-With the help of this command you can stream any file without downloading it and also download it fast. .
-
-Just send the /stream command first and then send any file, then the bot will give you the stream and download link
-"""
-
     APPROVE_TXT = """
 ᴊᴜsᴛ ᴀᴅᴅ ᴍᴇ ɪɴ ᴜʀ ᴄʜᴀɴɴᴇʟ ᴏʀ ɢʀᴏᴜᴘ ᴀɴᴅ sᴇᴇ ᴍᴀɢɪᴄ
 """
