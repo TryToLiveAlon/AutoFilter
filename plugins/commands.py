@@ -251,12 +251,12 @@ async def start(client, message):
 
             if STREAM_MODE:
                 btn = [
-                    [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data=f'generate_stream_link:{file_id}')],
-                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=MOVIE_UPDATE_CHANNEL_LNK)]  # Keep this line unchanged
+                    [InlineKeyboardButton('ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ', callback_data=f'generate_stream_link:{file_id}')],
+                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ', url=MOVIE_UPDATE_CHANNEL_LNK)]  # Keep this line unchanged
                 ]
             else:
                 btn = [
-                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=MOVIE_UPDATE_CHANNEL_LNK)]
+                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ', url=MOVIE_UPDATE_CHANNEL_LNK)]
                 ]
             try:
                 await client.send_cached_media(
@@ -469,12 +469,12 @@ async def start(client, message):
                     return
             if STREAM_MODE:
                 btn = [
-                    [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data=f'generate_stream_link:{file_id}')],
-                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=MOVIE_UPDATE_CHANNEL_LNK)]  # Keep this line unchanged  
+                    [InlineKeyboardButton(' ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ', callback_data=f'generate_stream_link:{file_id}')],
+                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ', url=MOVIE_UPDATE_CHANNEL_LNK)]  # Keep this line unchanged  
                 ]
             else:
                 btn = [
-                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=MOVIE_UPDATE_CHANNEL_LNK)]
+                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ', url=MOVIE_UPDATE_CHANNEL_LNK)]
                 ]
 
             msg = await client.send_cached_media(
@@ -549,13 +549,13 @@ async def start(client, message):
                    return
             if STREAM_MODE:
                 btn = [
-                    [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data=f'generate_stream_link:{file_id}')],
-                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=MOVIE_UPDATE_CHANNEL_LNK)]  # Keep this line unchanged
+                    [InlineKeyboardButton(' ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ', callback_data=f'generate_stream_link:{file_id}')],
+                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ', url=MOVIE_UPDATE_CHANNEL_LNK)]  # Keep this line unchanged
              
                 ]
             else:
                 btn = [
-                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=MOVIE_UPDATE_CHANNEL_LNK)]
+                    [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ', url=MOVIE_UPDATE_CHANNEL_LNK)]
                 ]
             msg = await client.send_cached_media(
                 chat_id=message.from_user.id,
@@ -626,12 +626,12 @@ async def start(client, message):
             return
     if STREAM_MODE:
         btn = [
-            [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data=f'generate_stream_link:{file_id}')],
-            [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=MOVIE_UPDATE_CHANNEL_LNK)]  # Keep this line unchanged
+            [InlineKeyboardButton('ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ', callback_data=f'generate_stream_link:{file_id}')],
+            [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ', url=MOVIE_UPDATE_CHANNEL_LNK)]  # Keep this line unchanged
         ]
     else:
         btn = [
-            [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=MOVIE_UPDATE_CHANNEL_LNK)]
+            [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ', url=MOVIE_UPDATE_CHANNEL_LNK)]
         ]
     msg = await client.send_cached_media(
         chat_id=message.from_user.id,
@@ -1350,7 +1350,64 @@ async def removetutorial(bot, message):
     await save_group_settings(grpid, 'is_tutorial', False)
     await reply.edit_text(f"<b>ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ʀᴇᴍᴏᴠᴇᴅ ᴛᴜᴛᴏʀɪᴀʟ ʟɪɴᴋ ✅</b>")
     
+
+@Client.on_callback_query(filters.regex("topsearch"))
+async def topsearch_callback(client, callback_query):
     
+    def is_alphanumeric(string):
+        return bool(re.match('^[a-zA-Z0-9 ]*$', string))
+    
+    limit = 20  
+    top_messages = await mdb.get_top_messages(limit)
+    seen_messages = set()
+    truncated_messages = []
+    for msg in top_messages:
+        msg_lower = msg.lower()
+        if msg_lower not in seen_messages and is_alphanumeric(msg):
+            seen_messages.add(msg_lower)
+            
+            if len(msg) > 35:
+                truncated_messages.append(msg[:32] + "...")
+            else:
+                truncated_messages.append(msg)
+    keyboard = [truncated_messages[i:i+2] for i in range(0, len(truncated_messages), 2)]
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard, 
+        one_time_keyboard=True, 
+        resize_keyboard=True, 
+        placeholder="Most searches of the day"
+    )
+    await callback_query.message.reply_text("<b>Tᴏᴘ Sᴇᴀʀᴄʜᴇs Oғ Tʜᴇ Dᴀʏ 👇</b>", reply_markup=reply_markup)
+    await callback_query.answer()
+
+@Client.on_message(filters.command('top_search'))
+async def top(_, message):
+    def is_alphanumeric(string):
+        return bool(re.match('^[a-zA-Z0-9 ]*$', string))
+    try:
+        limit = int(message.command[1])
+    except (IndexError, ValueError):
+        limit = 20
+    top_messages = await mdb.get_top_messages(limit)
+    seen_messages = set()
+    truncated_messages = []
+    for msg in top_messages:
+        if msg.lower() not in seen_messages and is_alphanumeric(msg):
+            seen_messages.add(msg.lower())
+            
+            if len(msg) > 35:
+                truncated_messages.append(msg[:35 - 3])
+            else:
+                truncated_messages.append(msg)
+    keyboard = []
+    for i in range(0, len(truncated_messages), 2):
+        row = truncated_messages[i:i+2]
+        keyboard.append(row)
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True, placeholder="Most searches of the day")
+    await message.reply_text(f"<b>Tᴏᴘ Sᴇᴀʀᴄʜᴇs Oғ Tʜᴇ Dᴀʏ 👇</b>", reply_markup=reply_markup)
+
+
+
 @Client.on_message(filters.command('trendlist'))
 async def trendlist(client, message):
     def is_alphanumeric(string):
