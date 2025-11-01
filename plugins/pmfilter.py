@@ -1681,10 +1681,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
         buttons = [[
                     InlineKeyboardButton('ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
                 ],[
-                    InlineKeyboardButton('• ᴄᴏᴍᴍᴀɴᴅꜱ •', callback_data='main'),
+                    InlineKeyboardButton('• ᴘʀᴇᴍɪᴜᴍ •', callback_data='premium_info'),
                     InlineKeyboardButton('• ᴇᴀʀɴ ᴍᴏɴᴇʏ •', callback_data='shortlink_info')
                 ],[
-                    InlineKeyboardButton('• ᴘʀᴇᴍɪᴜᴍ •', callback_data='premium_info'),
                     InlineKeyboardButton('• ᴀʙᴏᴜᴛ •', callback_data='about')
                   ]]
         
@@ -1712,9 +1711,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
         ], [
             InlineKeyboardButton('• ɢʀᴏᴜᴘ •', callback_data='users'),
             InlineKeyboardButton('• ᴍᴏʀᴇ •', callback_data='help')
-        ], [
-            InlineKeyboardButton('• ᴀɪ •', callback_data='aihelp'),
-            InlineKeyboardButton('• ᴛʀᴇɴᴅɪɴɢ •', callback_data='topsearch')
         ], [
             InlineKeyboardButton('• ᴍᴏsᴛ sᴇᴀʀᴄʜ •', callback_data='topsearch')
         ], [
