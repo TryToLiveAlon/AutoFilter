@@ -1643,15 +1643,15 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 text=f"•• ʟɪɴᴋ ɢᴇɴᴇʀᴀᴛᴇᴅ ꜰᴏʀ ɪᴅ #{user_id} \n•• ᴜꜱᴇʀɴᴀᴍᴇ : {username} \n\n•• ᖴᎥᒪᗴ Nᗩᗰᗴ : {fileName}",
                 quote=True,
                 disable_web_page_preview=True,
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 Fast Download 🚀", url=lazy_download),  # we download Link
-                                                    InlineKeyboardButton('🖥️ Watch online 🖥️', url=lazy_stream)]])  # web stream Link
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 Fast Download", url=lazy_download),  # we download Link
+                                                    InlineKeyboardButton('🖥️ Watch online', url=lazy_stream)]])  # web stream Link
             )
             lucypro = await query.message.reply_text(
                 text="•• ʟɪɴᴋ ɢᴇɴᴇʀᴀᴛᴇᴅ ☠︎⚔",
                 quote=True,
                 disable_web_page_preview=True,
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 Fast Download 🚀", url=lazy_download),  # we download Link
-                                                    InlineKeyboardButton('🖥️ Watch online 🖥️', url=lazy_stream)]])  # web stream Link
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 Fast Download", url=lazy_download),  # we download Link
+                                                    InlineKeyboardButton('🖥️ Watch online', url=lazy_stream)]])  # web stream Link
             )  
             
             await asyncio.sleep(DELETE_TIME) 
@@ -2129,11 +2129,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
         buttons = [[
             InlineKeyboardButton('ᴀᴘᴘʀᴏᴠᴇ', callback_data='approve'),
             InlineKeyboardButton('ғᴏɴᴛ', callback_data='font')
-        ], [
-            InlineKeyboardButton('ᴍᴏɴɢᴏ', callback_data='mongo'),
-        ], [
+        ],[
             InlineKeyboardButton('ᴛᴏᴏʟꜱ', callback_data='group'),
-            InlineKeyboardButton('sᴛʀᴇᴀᴍ', callback_data='streamx')
+            InlineKeyboardButton('ᴍᴏɴɢᴏ', callback_data='mongo')
         ], [
             InlineKeyboardButton('◁', callback_data='main'),
             InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='start'),
