@@ -2167,7 +2167,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             InlineKeyboardButton('‼️ ᴅɪꜱᴄʟᴀɪᴍᴇʀ ‼️', callback_data='disclaimer'),
         ], [
             InlineKeyboardButton('• sᴜᴘᴘᴏʀᴛ', callback_data='group_info'),
-            InlineKeyboardButton('ᴄᴏᴍᴍᴀɴᴅs •', callback_data='main')
+            InlineKeyboardButton('ғᴇᴀᴛᴜʀᴇs •', callback_data='main')
         ], [
             InlineKeyboardButton('• ᴅᴇᴠᴇʟᴏᴘᴇʀ', user_id=int(6660736046)),
             InlineKeyboardButton('ɴᴇᴛᴡᴏʀᴋ •', url="t.me/Death_Movie")
