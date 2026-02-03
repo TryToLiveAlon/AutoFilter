@@ -18,6 +18,7 @@ logger.setLevel(logging.INFO)
 #---------------------------------------------------------
 # Some basic variables needed
 tempDict = {'indexDB': DATABASE_URI}
+saveMedia = None
 
 # Primary DB
 client = db = instance = Media = None
@@ -31,7 +32,7 @@ if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
 
 # Primary DB Model
 def register_primary(cls):
-    if instance:
+    if instance is not None:
         return instance.register(cls)
     return cls
 
@@ -50,7 +51,7 @@ class Media(Document):
         collection_name = COLLECTION_NAME
 
 MediaModels = []
-if instance:
+if instance is not None:
     MediaModels.append(Media)
 
 #secondary db
@@ -59,9 +60,14 @@ if DATABASE_URI2 and DATABASE_URI2.startswith('mongodb'):
     try:
         client2 = AsyncIOMotorClient(DATABASE_URI2)
         db2 = client2[DATABASE_NAME]
-        instance2 = Instance.from_db(db2)
+        instance2 = Instance.from_db(db2) if db2 is not None else None
 
-        @instance2.register
+        def register_secondary(cls):
+            if instance2 is not None:
+                return instance2.register(cls)
+            return cls
+
+        @register_secondary
         class Media2(Document):
             file_id = fields.StrField(attribute='_id')
             file_ref = fields.StrField(allow_none=True)
@@ -74,7 +80,8 @@ if DATABASE_URI2 and DATABASE_URI2.startswith('mongodb'):
             class Meta:
                 indexes = ('$file_name', )
                 collection_name = COLLECTION_NAME
-        MediaModels.insert(0, Media2)
+        if Media2 is not None:
+            MediaModels.insert(0, Media2)
     except Exception as e:
         logger.error(f"Error initializing DATABASE_URI2: {e}")
 
@@ -84,9 +91,14 @@ if DATABASE_URI3 and DATABASE_URI3.startswith('mongodb'):
     try:
         client3 = AsyncIOMotorClient(DATABASE_URI3)
         db3 = client3[DATABASE_NAME]
-        instance3 = Instance.from_db(db3)
+        instance3 = Instance.from_db(db3) if db3 is not None else None
 
-        @instance3.register
+        def register_tertiary(cls):
+            if instance3 is not None:
+                return instance3.register(cls)
+            return cls
+
+        @register_tertiary
         class Media3(Document):
             file_id = fields.StrField(attribute='_id')
             file_ref = fields.StrField(allow_none=True)
@@ -99,7 +111,8 @@ if DATABASE_URI3 and DATABASE_URI3.startswith('mongodb'):
             class Meta:
                 indexes = ('$file_name', )
                 collection_name = COLLECTION_NAME
-        MediaModels.insert(0, Media3)
+        if Media3 is not None:
+            MediaModels.insert(0, Media3)
     except Exception as e:
         logger.error(f"Error initializing DATABASE_URI3: {e}")
 
@@ -122,6 +135,9 @@ async def choose_mediaDB():
 async def save_file(bot, media):
   """Save file in database"""
   global saveMedia
+  if saveMedia is None:
+      logger.error("No database available to save file!")
+      return False, 0
   file_id, file_ref = unpack_new_file_id(media.file_id)
   file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name))
   try:

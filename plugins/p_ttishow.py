@@ -168,14 +168,18 @@ async def get_ststs(bot, message):
     premium = await db.all_premium_users()
 
     # Primary DB stats
-    file = await Media.count_documents()
-    size = await db.get_db_size()
-    free = 536870912 - size
-    size_str = get_size(size)
-    free_str = get_size(free)
+    if Media is not None:
+        file = await Media.count_documents()
+        size = await db.get_db_size()
+        free = 536870912 - size
+        size_str = get_size(size)
+        free_str = get_size(free)
+    else:
+        file = 0
+        size_str = free_str = "0 B"
 
     # Secondary DB stats
-    if Media2:
+    if Media2 is not None:
         files2 = await Media2.count_documents()
         size2 = await db2.get_db_size()
         free2 = 536870912 - size2
@@ -185,7 +189,7 @@ async def get_ststs(bot, message):
         files2 = size2_str = free2_str = 0
 
     # Tertiary DB stats
-    if Media3:
+    if Media3 is not None:
         files3 = await Media3.count_documents()
         size3 = await db3.get_db_size()
         free3 = 536870912 - size3

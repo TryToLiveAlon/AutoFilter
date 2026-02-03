@@ -7,8 +7,8 @@ from info import DATABASE_URI, DATABASE_NAME
 class VR_db:
     def __init__(self, db_url, db_name, timezone):
         self.client = MongoClient(db_url) if db_url and db_url.startswith('mongodb') else None
-        self.db = self.client[db_name] if self.client else None
-        self.collection = self.db.verifications if self.db else None
+        self.db = self.client[db_name] if self.client is not None else None
+        self.collection = self.db.verifications if self.db is not None else None
         self.timezone = pytz.timezone(timezone)
 
     async def save_verification(self, user_id):

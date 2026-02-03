@@ -5,9 +5,9 @@ from datetime import datetime
 class Database:
     def __init__(self, uri, db_name):
         self.client = AsyncIOMotorClient(uri) if uri and uri.startswith('mongodb') else None
-        self.db = self.client[db_name] if self.client else None
-        self.col = self.db.user if self.db else None
-        self.config_col = self.db.configuration if self.db else None
+        self.db = self.client[db_name] if self.client is not None else None
+        self.col = self.db.user if self.db is not None else None
+        self.config_col = self.db.configuration if self.db is not None else None
 
     async def update_top_messages(self, user_id, message_text):
         user = await self.col.find_one({"user_id": user_id, "messages.text": message_text})
