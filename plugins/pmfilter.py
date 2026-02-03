@@ -2557,7 +2557,7 @@ async def auto_filter(client, msg, spoll=False):
     if not spoll:
         message = msg
         if message.text.startswith("/"): return  # ignore commands
-        if re.findall("((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
+        if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
             return
         if len(message.text) < 100:
             search = message.text         
@@ -2790,60 +2790,91 @@ async def ai_spell_check(chat_id, wrong_name):
     return None
 
 async def advantage_spell_chok(client, message):
-    mv_id = message.id
     search = message.text
     chat_id = message.chat.id
     settings = await get_settings(chat_id)
+
+    # Clean the query for better IMDb search
     query = re.sub(
         r"\b(pl(i|e)*?(s|z+|ease|se|ese|(e+)s(e)?)|((send|snd|giv(e)?|gib)(\sme)?)|movie(s)?|new|latest|br((o|u)h?)*|^h(e|a)?(l)*(o)*|mal(ayalam)?|t(h)?amil|file|that|find|und(o)*|kit(t(i|y)?)?o(w)?|thar(u)?(o)*w?|kittum(o)*|aya(k)*(um(o)*)?|full\smovie|any(one)|with\ssubtitle(s)?)",
-        "", message.text, flags=re.IGNORECASE)
+        "", search, flags=re.IGNORECASE)
     query = query.strip()
+
+    if not query:
+        # If query becomes empty after cleaning, use original text but strip common words
+        query = search.strip()
+
     try:
         movies = await get_poster(query, bulk=True)
-    except:
-        k = await message.reply(script.I_CUDNT.format(message.from_user.mention))
-        asyncio.create_task(delete_after([k, message], 60))
-        return
+    except Exception as e:
+        logging.error(f"IMDb search error in advantage_spell_chok: {e}")
+        movies = []
+
     if not movies:
+        # Fallback to Google only if IMDb yields nothing
         google = search.replace(" ", "+")
         button = [[
-            InlineKeyboardButton("ᴅᴏ ɢᴏᴏɢʟᴇ", url=f"https://www.google.com/search?q={google}")
+            InlineKeyboardButton("🔍 ᴅᴏ ɢᴏᴏɢʟᴇ", url=f"https://www.google.com/search?q={google}")
         ]]
         k = await message.reply_text(text=script.I_CUDNT.format(search), reply_markup=InlineKeyboardMarkup(button))
         asyncio.create_task(delete_after([k, message], 60))
         return
-    # Filter movies that have files in the bot to provide better suggestions
-    valid_movies = []
+
+    # Process and clean suggestions
+    suggestion_list = []
+    seen_titles = set()
+
+    # First, prioritize movies that actually have files in our DB
     for movie in movies:
         title = movie.get('title')
-        if not title:
+        year = movie.get('year')
+        if not title or title.lower() in seen_titles:
             continue
-        files, _, _ = await get_search_results(chat_id=message.chat.id, query=title, max_results=1)
-        if files:
-            valid_movies.append(movie)
-        elif title.lower().startswith("the "):
-            files, _, _ = await get_search_results(chat_id=message.chat.id, query=title[4:], max_results=1)
-            if files:
-                valid_movies.append(movie)
-        else:
-            files, _, _ = await get_search_results(chat_id=message.chat.id, query="The " + title, max_results=1)
-            if files:
-                valid_movies.append(movie)
 
-    if not valid_movies:
-        valid_movies = movies[:10]
+        # Check if we have files for this title
+        files, _, _ = await get_search_results(chat_id=chat_id, query=title, max_results=1)
+        if files:
+            suggestion_list.append(movie)
+            seen_titles.add(title.lower())
+
+        if len(suggestion_list) >= 8: # Limit prioritize suggestions
+            break
+
+    # If we don't have enough suggestions from DB, add more from IMDb results
+    if len(suggestion_list) < 8:
+        for movie in movies:
+            title = movie.get('title')
+            if not title or title.lower() in seen_titles:
+                continue
+            suggestion_list.append(movie)
+            seen_titles.add(title.lower())
+            if len(suggestion_list) >= 10:
+                break
 
     user = message.from_user.id if message.from_user else 0
-    buttons = [[
-        InlineKeyboardButton(text=f"{movie.get('title')} ({movie.get('year')})", callback_data=f"spol#{movie.movieID}#{user}")
-    ]
-        for movie in valid_movies
-    ]
-    buttons.append(
-        [InlineKeyboardButton(text="ᴄʟᴏsᴇ", callback_data='close_data')]
+    buttons = []
+
+    # Create buttons for each suggestion (2 per row for better look if titles are short, else 1)
+    for i in range(0, len(suggestion_list), 1):
+        movie = suggestion_list[i]
+        title = movie.get('title')
+        year = movie.get('year')
+        btn_text = f"{title}" + (f" ({year})" if year else "")
+        buttons.append([
+            InlineKeyboardButton(text=btn_text, callback_data=f"spol#{movie.movieID}#{user}")
+        ])
+
+    buttons.append([
+        InlineKeyboardButton(text="✘ ᴄʟᴏsᴇ ✘", callback_data='close_data')
+    ])
+
+    msg_text = script.SUGG_TXT.format(search)
+    d = await message.reply_text(
+        text=msg_text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        reply_to_message_id=message.id
     )
-    d = await message.reply_text(text=script.CUDNT_FND.format(message.from_user.mention), reply_markup=InlineKeyboardMarkup(buttons), reply_to_message_id=message.id)
-    asyncio.create_task(delete_after([d, message], 60))
+    asyncio.create_task(delete_after([d, message], 120)) # Give more time to read suggestions
 
 
 async def manual_filters(client, message, text=False):

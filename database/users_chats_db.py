@@ -299,20 +299,32 @@ class Database:
         return False
 
     async def add_verify_token(self, user_id, token, short_link):
-        await self.col.update_one(
-            {'id': int(user_id)},
-            {'$set': {f'verify_tokens.{token}': short_link}}
-        )
+        try:
+            uid = int(user_id)
+            await self.col.update_one(
+                {'id': uid},
+                {'$set': {f'verify_tokens.{token}': short_link}},
+                upsert=True
+            )
+        except Exception as e:
+            print(f"Error in add_verify_token: {e}")
 
     async def get_verify_token_link(self, user_id, token):
         try:
             uid = int(user_id)
         except (ValueError, TypeError, OverflowError):
+            print(f"Invalid user_id in get_verify_token_link: {user_id}")
             return None
+
         user = await self.col.find_one({'id': uid})
         if user:
             tokens = user.get('verify_tokens', {})
-            return tokens.get(token)
+            link = tokens.get(token)
+            if not link:
+                print(f"Token {token} not found for user {uid}. Available tokens: {list(tokens.keys())}")
+            return link
+        else:
+            print(f"User {uid} not found in database during token lookup.")
         return None
 
     async def pm_search_status(self, bot_id):
