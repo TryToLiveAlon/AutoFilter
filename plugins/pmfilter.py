@@ -2834,34 +2834,39 @@ async def advantage_spell_chok(client, message):
         except Exception as e:
             logging.error(f"IMDb search error in advantage_spell_chok: {e}")
 
-    if not suggestion_list:
-        # Last fallback if everything else fails - inform user
-        k = await message.reply_text(text=script.I_CUDNT.format(search))
-        asyncio.create_task(delete_after([k, message], 60))
-        return
-
     user = message.from_user.id if message.from_user else 0
     buttons = []
 
-    for sug in suggestion_list:
-        title = sug['title']
-        year = sug['year']
-        btn_text = f"{title}" + (f" ({year})" if year else "")
-        if sug['from_db']:
-             # Use a different callback for DB items to just trigger a search
-             buttons.append([
-                InlineKeyboardButton(text=btn_text, switch_inline_query_current_chat=title)
-            ])
-        else:
-            buttons.append([
-                InlineKeyboardButton(text=btn_text, callback_data=f"spol#{sug['id']}#{user}")
-            ])
+    if suggestion_list:
+        for sug in suggestion_list:
+            title = sug['title']
+            year = sug['year']
+            btn_text = f"{title}" + (f" ({year})" if year else "")
+            if sug['from_db']:
+                 # Use a different callback for DB items to just trigger a search
+                 buttons.append([
+                    InlineKeyboardButton(text=btn_text, switch_inline_query_current_chat=title)
+                ])
+            else:
+                buttons.append([
+                    InlineKeyboardButton(text=btn_text, callback_data=f"spol#{sug['id']}#{user}")
+                ])
+
+    google_url = f"https://www.google.com/search?q={quote_plus(search)}+movie"
+    buttons.append([
+        InlineKeyboardButton(text="ɢᴏᴏɢʟᴇ sᴇᴀʀᴄʜ", url=google_url)
+    ])
 
     buttons.append([
+        InlineKeyboardButton(text="🆘 Support", url="https://t.me/death_movies"),
         InlineKeyboardButton(text="✘ ᴄʟᴏsᴇ ✘", callback_data='close_data')
     ])
 
-    msg_text = script.SUGG_TXT.format(search)
+    if not suggestion_list:
+        msg_text = script.I_CUDNT.format(search)
+    else:
+        msg_text = script.SUGG_TXT.format(search)
+
     d = await message.reply_text(
         text=msg_text,
         reply_markup=InlineKeyboardMarkup(buttons),

@@ -32,7 +32,10 @@ BATCH_FILES = {}
 @Client.on_message(filters.command("start") & filters.incoming)
 async def start(client, message):
     if await db.is_user_temp_banned(message.from_user.id):
-        await message.reply_text("<b>You are temporarily banned for attempting to bypass verification. Please wait until your ban expires.</b>")
+        await message.reply_text(
+            "<b>You are temporarily banned for 30 seconds for attempting to bypass verification. Please wait until your ban expires.</b>",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🆘 Support", url="https://t.me/death_movies")]])
+        )
         return
     if EMOJI_MODE:    
         await message.react(emoji=random.choice(REACTIONS), big=True) 
@@ -117,14 +120,18 @@ async def start(client, message):
        
     if len(message.command) == 2 and message.command[1] in ["subscribe", "error", "okay", "help", "verify", "temp_banned"]:
         if message.command[1] == "temp_banned":
-            await message.reply_text("<b>You are temporarily banned for attempting to bypass verification. Please wait until your ban expires.</b>")
+            await message.reply_text(
+                "<b>You are temporarily banned for 30 seconds for attempting to bypass verification. Please wait until your ban expires.</b>",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🆘 Support", url="https://t.me/death_movies")]])
+            )
             return
         if message.command[1] == "verify":
             if not await check_verification(client, message.from_user.id):
                 btn = [[
                     InlineKeyboardButton("ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ᴠᴇʀɪғʏ", url=await get_token(client, message.from_user.id, f"https://telegram.me/{temp.U_NAME}?start=", "none"))
                 ],[
-                    InlineKeyboardButton("ʜᴏᴡ ᴛᴏ ᴠᴇʀɪғʏ", url=HOW_TO_VERIFY)
+                    InlineKeyboardButton("ʜᴏᴡ ᴛᴏ ᴠᴇʀɪғʏ", url=HOW_TO_VERIFY),
+                    InlineKeyboardButton("🆘 Support", url="https://t.me/death_movies")
                 ]]
                 await message.reply_text(
                     text=f"<blockquote><b>ʜᴇʏ {message.from_user.mention},\n\nʏᴏᴜ ʜᴀᴠᴇ ɴᴏᴛ ᴠᴇʀɪꜰɪᴇᴅ ʏᴏᴜʀꜱᴇʟꜰ ᴛᴏᴅᴀʏ ✅\n\nᴘʟᴇᴀꜱᴇ ᴠᴇʀɪꜰʏ ᴛᴏ ᴜꜱᴇ ɪɴʟɪɴᴇ ꜱᴇᴀʀᴄʜ ᴀɴᴅ ɢᴇᴛ ᴜɴʟɪᴍɪᴛᴇᴅ ᴀᴄᴄᴇꜱꜱ ꜰᴏʀ {VERIFY_EXPIRE} ʜᴏᴜʀꜱ.</b></blockquote>",
@@ -376,15 +383,19 @@ async def start(client, message):
                 # Bypass attempt detected
                 await db.temp_ban_user(userid, 30)
                 await message.reply_text(
-                    text="<b>Bypass detected. If you are caught again, you will be permanently banned.</b>",
-                    protect_content=False
+                    text="<b>Bypass detected. You are banned for 30 seconds. If you are caught again, you will be permanently banned.</b>",
+                    protect_content=False,
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🆘 Support", url="https://t.me/death_movies")]])
                 )
 
                 # After 30 seconds, send a new link
                 async def send_new_link():
                     await asyncio.sleep(30)
                     new_verify_link = await get_token(client, userid, f"https://telegram.me/{temp.U_NAME}?start=", fileid)
-                    btn = [[InlineKeyboardButton("ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ᴠᴇʀɪғʏ", url=new_verify_link)]]
+                    btn = [
+                        [InlineKeyboardButton("ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ᴠᴇʀɪғʏ", url=new_verify_link)],
+                        [InlineKeyboardButton("🆘 Support", url="https://t.me/death_movies")]
+                    ]
                     await client.send_message(
                         chat_id=userid,
                         text="<b>Your temporary ban has expired. Here is your new verification link:</b>",
@@ -517,7 +528,8 @@ async def start(client, message):
                     btn = [[
                        InlineKeyboardButton("ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ᴠᴇʀɪғʏ", url=await get_token(client, message.from_user.id, f"https://telegram.me/{temp.U_NAME}?start=", file_id))
                        ],[
-                       InlineKeyboardButton("ʜᴏᴡ ᴛᴏ ᴠᴇʀɪғʏ", url=HOW_TO_VERIFY)
+                       InlineKeyboardButton("ʜᴏᴡ ᴛᴏ ᴠᴇʀɪғʏ", url=HOW_TO_VERIFY),
+                       InlineKeyboardButton("🆘 Support", url="https://t.me/death_movies")
                    ]]
                     l = await message.reply_text(
                         text=f"<blockquote><b>ʜᴇʏ ʙʀᴏ,\n\n ‼️ ʏᴏᴜ'ʀᴇ ɴᴏᴛ ᴠᴇʀɪғɪᴇᴅ ᴛᴏᴅᴀʏ ‼️\n\n ›› ᴘʟᴇᴀsᴇ ᴠᴇʀɪғʏ ᴀɴᴅ ɢᴇᴛ ᴜɴʟɪᴍɪᴛᴇᴅ ᴀᴄᴄᴇss ғᴏʀ {VERIFY_EXPIRE} ʜᴏᴜʀs ✅</blockquote></b>",
@@ -594,7 +606,8 @@ async def start(client, message):
                    btn = [[
                        InlineKeyboardButton("ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ᴠᴇʀɪғʏ", url=await get_token(client, message.from_user.id, f"https://telegram.me/{temp.U_NAME}?start=", file_id))
                    ],[
-                        InlineKeyboardButton("ʜᴏᴡ ᴛᴏ ᴠᴇʀɪғʏ", url=HOW_TO_VERIFY)
+                        InlineKeyboardButton("ʜᴏᴡ ᴛᴏ ᴠᴇʀɪғʏ", url=HOW_TO_VERIFY),
+                        InlineKeyboardButton("🆘 Support", url="https://t.me/death_movies")
                    ]]
                    l = await message.reply_text(
                        text=f"<blockquote><b>ʜᴇʏ ʙʀᴏ,\n\n ‼️ ʏᴏᴜ'ʀᴇ ɴᴏᴛ ᴠᴇʀɪғɪᴇᴅ ᴛᴏᴅᴀʏ ‼️\n\n ›› ᴘʟᴇᴀsᴇ ᴠᴇʀɪғʏ ᴀɴᴅ ɢᴇᴛ ᴜɴʟɪᴍɪᴛᴇᴅ ᴀᴄᴄᴇss ғᴏʀ {VERIFY_EXPIRE} ʜᴏᴜʀs ✅\n\n ›› ɪғ ʏᴏᴜ ᴡᴀɴᴛ ᴅɪʀᴇᴄᴛ ғɪʟᴇs ᴛʜᴇɴ ʏᴏᴜ ᴄᴀɴ ᴛᴀᴋᴇ ᴘʀᴇᴍɪᴜᴍ sᴇʀᴠɪᴄᴇs.</blockquote></b>",
@@ -669,7 +682,8 @@ async def start(client, message):
             btn = [[
               InlineKeyboardButton("ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ᴠᴇʀɪғʏ", url=await get_token(client, message.from_user.id, f"https://telegram.me/{temp.U_NAME}?start=", file_id))
            ],[
-              InlineKeyboardButton("ʜᴏᴡ ᴛᴏ ᴠᴇʀɪғʏ", url=HOW_TO_VERIFY)
+              InlineKeyboardButton("ʜᴏᴡ ᴛᴏ ᴠᴇʀɪғʏ", url=HOW_TO_VERIFY),
+              InlineKeyboardButton("🆘 Support", url="https://t.me/death_movies")
            ]]
             l = await message.reply_text(
                 text=f"<blockquote><b>ʜᴇʏ ʙʀᴏ,\n\n ‼️ ʏᴏᴜ'ʀᴇ ɴᴏᴛ ᴠᴇʀɪғɪᴇᴅ ᴛᴏᴅᴀʏ ‼️\n\n ›› ᴘʟᴇᴀsᴇ ᴠᴇʀɪғʏ ᴀɴᴅ ɢᴇᴛ ᴜɴʟɪᴍɪᴛᴇᴅ ᴀᴄᴄᴇss ғᴏʀ {VERIFY_EXPIRE} ʜᴏᴜʀs ✅\n\n ›› ɪғ ʏᴏᴜ ᴡᴀɴᴛ ᴅɪʀᴇᴄᴛ ғɪʟᴇs ᴛʜᴇɴ ʏᴏᴜ ᴄᴀɴ ᴛᴀᴋᴇ ᴘʀᴇᴍɪᴜᴍ sᴇʀᴠɪᴄᴇs.</blockquote></b>",
