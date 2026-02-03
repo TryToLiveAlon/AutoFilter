@@ -112,7 +112,24 @@ async def start(client, message):
                 )
                 return
        
-    if len(message.command) == 2 and message.command[1] in ["subscribe", "error", "okay", "help"]:
+    if len(message.command) == 2 and message.command[1] in ["subscribe", "error", "okay", "help", "verify"]:
+        if message.command[1] == "verify":
+            if not await check_verification(client, message.from_user.id):
+                btn = [[
+                    InlineKeyboardButton("ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ᴠᴇʀɪғʏ", url=await get_token(client, message.from_user.id, f"https://telegram.me/{temp.U_NAME}?start=", "none"))
+                ],[
+                    InlineKeyboardButton("ʜᴏᴡ ᴛᴏ ᴠᴇʀɪғʏ", url=HOW_TO_VERIFY)
+                ]]
+                await message.reply_text(
+                    text=f"<blockquote><b>ʜᴇʏ {message.from_user.mention},\n\nʏᴏᴜ ʜᴀᴠᴇ ɴᴏᴛ ᴠᴇʀɪꜰɪᴇᴅ ʏᴏᴜʀꜱᴇʟꜰ ᴛᴏᴅᴀʏ ✅\n\nᴘʟᴇᴀꜱᴇ ᴠᴇʀɪꜰʏ ᴛᴏ ᴜꜱᴇ ɪɴʟɪɴᴇ ꜱᴇᴀʀᴄʜ ᴀɴᴅ ɢᴇᴛ ᴜɴʟɪᴍɪᴛᴇᴅ ᴀᴄᴄᴇꜱꜱ ꜰᴏʀ {VERIFY_EXPIRE} ʜᴏᴜʀꜱ.</b></blockquote>",
+                    protect_content=False,
+                    reply_markup=InlineKeyboardMarkup(btn)
+                )
+                return
+            else:
+                await message.reply_text("<b>ʏᴏᴜ ᴀʀᴇ ᴀʟʀᴇᴀᴅʏ ᴠᴇʀɪꜰɪᴇᴅ ! ʏᴏᴜ ᴄᴀɴ ᴜꜱᴇ ɪɴʟɪɴᴇ ꜱᴇᴀʀᴄʜ ɴᴏᴡ.</b>")
+                return
+
         buttons = [[
                     InlineKeyboardButton('ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
                 ],[
@@ -341,9 +358,14 @@ async def start(client, message):
             )
         is_valid = await check_token(client, userid, token)
         if is_valid == True:
-            btn = [[
-                InlineKeyboardButton("ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ɢᴇᴛ ғɪʟᴇ", url=f"https://telegram.me/{temp.U_NAME}?start=files_{fileid}")
-            ]]
+            if fileid != "none":
+                btn = [[
+                    InlineKeyboardButton("ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ɢᴇᴛ ғɪʟᴇ", url=f"https://telegram.me/{temp.U_NAME}?start=files_{fileid}")
+                ]]
+            else:
+                btn = [[
+                    InlineKeyboardButton("ꜱᴇᴀʀᴄʜ ᴀɢᴀɪɴ (ɪɴʟɪɴᴇ)", switch_inline_query_current_chat="")
+                ]]
             await message.reply_photo(
                 photo="https://graph.org/file/6928de1539e2e80e47fb8.jpg",
                 caption=f"<blockquote><b>👋 ʜᴇʏ {message.from_user.mention}, ʏᴏᴜ'ʀᴇ ᴀʀᴇ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴠᴇʀɪꜰɪᴇᴅ ✅\n\nɴᴏᴡ ʏᴏᴜ'ᴠᴇ ᴜɴʟɪᴍɪᴛᴇᴅ ᴀᴄᴄᴇꜱꜱ ғᴏʀ {VERIFY_EXPIRE} ʜᴏᴜʀs🎉</blockquote></b>",

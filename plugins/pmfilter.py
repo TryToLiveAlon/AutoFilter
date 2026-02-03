@@ -337,6 +337,11 @@ async def advantage_spoll_choker(bot, query):
         
         if k == False:
             files, offset, total_results = await get_search_results(query.message.chat.id, movie, offset=0, filter=True)
+            if not files and movie.lower().startswith("the "):
+                alt_movie = movie[4:]
+                files, offset, total_results = await get_search_results(query.message.chat.id, alt_movie, offset=0, filter=True)
+                if files:
+                    movie = alt_movie
             
             if files:
                 k = (movie, files, offset, total_results)
@@ -2773,22 +2778,36 @@ async def auto_filter(client, msg, spoll=False):
             await message.delete()
 
 async def ai_spell_check(chat_id, wrong_name):
-    async def search_movie(wrong_name):
-        search_results = imdb.search_movie(wrong_name)
-        movie_list = [movie['title'] for movie in search_results]
-        return movie_list
-    movie_list = await search_movie(wrong_name)
+    def search_imdb(query):
+        try:
+            search_results = imdb.search_movie(query)
+            return [movie['title'] for movie in search_results]
+        except Exception as e:
+            logger.error(f"IMDb search error: {e}")
+            return []
+
+    movie_list = await asyncio.to_thread(search_imdb, wrong_name)
     if not movie_list:
         return
-    for _ in range(5):
+
+    for _ in range(min(5, len(movie_list))):
         closest_match = process.extractOne(wrong_name, movie_list)
-        if not closest_match or closest_match[1] <= 80:
-            return 
+        if not closest_match or closest_match[1] <= 60:
+            break
+
         movie = closest_match[0]
         files, offset, total_results = await get_search_results(chat_id=chat_id, query=movie)
         if files:
             return movie
+
+        if movie.lower().startswith("the "):
+            alt_movie = movie[4:]
+            files, offset, total_results = await get_search_results(chat_id=chat_id, query=alt_movie)
+            if files:
+                return alt_movie
+
         movie_list.remove(movie)
+    return None
 
 async def advantage_spell_chok(client, message):
     mv_id = message.id
@@ -2798,9 +2817,9 @@ async def advantage_spell_chok(client, message):
     query = re.sub(
         r"\b(pl(i|e)*?(s|z+|ease|se|ese|(e+)s(e)?)|((send|snd|giv(e)?|gib)(\sme)?)|movie(s)?|new|latest|br((o|u)h?)*|^h(e|a)?(l)*(o)*|mal(ayalam)?|t(h)?amil|file|that|find|und(o)*|kit(t(i|y)?)?o(w)?|thar(u)?(o)*w?|kittum(o)*|aya(k)*(um(o)*)?|full\smovie|any(one)|with\ssubtitle(s)?)",
         "", message.text, flags=re.IGNORECASE)
-    query = query.strip() + " movie"
+    query = query.strip()
     try:
-        movies = await get_poster(search, bulk=True)
+        movies = await get_poster(query, bulk=True)
     except:
         k = await message.reply(script.I_CUDNT.format(message.from_user.mention))
         await asyncio.sleep(60)

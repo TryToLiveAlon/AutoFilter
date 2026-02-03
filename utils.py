@@ -116,7 +116,14 @@ async def get_poster(query, bulk=False, id=False, file=None):
                 year = list_to_str(year[:1]) 
         else:
             year = None
-        movieid = imdb.search_movie(title.lower(), results=10)
+
+        def search_imdb(t):
+            try:
+                return imdb.search_movie(t, results=10)
+            except:
+                return []
+
+        movieid = await asyncio.to_thread(search_imdb, title.lower())
         if not movieid:
             return None
         if year:
@@ -133,7 +140,16 @@ async def get_poster(query, bulk=False, id=False, file=None):
         movieid = movieid[0].movieID
     else:
         movieid = query
-    movie = imdb.get_movie(movieid)
+
+    def get_imdb_movie(mid):
+        try:
+            return imdb.get_movie(mid)
+        except:
+            return None
+
+    movie = await asyncio.to_thread(get_imdb_movie, movieid)
+    if not movie:
+        return None
     if movie.get("original air date"):
         date = movie["original air date"]
     elif movie.get("year"):
@@ -313,11 +329,9 @@ def list_to_str(k):
         return "N/A"
     elif len(k) == 1:
         return str(k[0])
-    elif MAX_LIST_ELM:
+    if MAX_LIST_ELM:
         k = k[:int(MAX_LIST_ELM)]
-        return ' '.join(f'{elem}, ' for elem in k)
-    else:
-        return ' '.join(f'{elem}, ' for elem in k)
+    return ', '.join(map(str, k))
 
 def last_online(from_user):
     time = ""

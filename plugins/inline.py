@@ -3,8 +3,8 @@ from pyrogram import Client, emoji, filters
 from pyrogram.errors.exceptions.bad_request_400 import QueryIdInvalid
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultCachedDocument, InlineQuery
 from database.ia_filterdb import get_search_results
-from utils import is_req_subscribed, get_size, temp
-from info import CACHE_TIME, AUTH_USERS, AUTH_CHANNEL, CUSTOM_FILE_CAPTION
+from utils import is_req_subscribed, get_size, temp, check_verification
+from info import CACHE_TIME, AUTH_USERS, AUTH_CHANNEL, CUSTOM_FILE_CAPTION, VERIFY
 from database.connections_mdb import active_connection
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,20 @@ async def answer(bot, query):
                            cache_time=0,
                            switch_pm_text='You have to subscribe my channel to use the bot',
                            switch_pm_parameter="subscribe")
+        return
+
+    if not await db.is_user_exist(query.from_user.id):
+        await query.answer(results=[],
+                           cache_time=0,
+                           switch_pm_text='Please start the bot in PM first',
+                           switch_pm_parameter="start")
+        return
+
+    if VERIFY and not await check_verification(bot, query.from_user.id):
+        await query.answer(results=[],
+                           cache_time=0,
+                           switch_pm_text='You are not verified today. Click here to verify.',
+                           switch_pm_parameter="verify")
         return
 
     results = []
@@ -96,6 +110,14 @@ async def answer(bot, query):
         switch_pm_text = f'{emoji.CROSS_MARK} No results'
         if string:
             switch_pm_text += f' for "{string}"'
+
+        try:
+            from plugins.pmfilter import ai_spell_check
+            suggest = await ai_spell_check(chat_id, string)
+            if suggest:
+                switch_pm_text = f"Did you mean '{suggest}'?"
+        except Exception as e:
+            logger.error(f"Inline suggestion error: {e}")
 
         await query.answer(results=[],
                            is_personal = True,
