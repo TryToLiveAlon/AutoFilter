@@ -166,33 +166,47 @@ async def get_ststs(bot, message):
     total_users = await db.total_users_count()
     totl_chats = await db.total_chat_count()
     premium = await db.all_premium_users()
+
+    # Primary DB stats
     file = await Media.count_documents()
     size = await db.get_db_size()
     free = 536870912 - size
-    size = get_size(size)
-    free = get_size(free)
+    size_str = get_size(size)
+    free_str = get_size(free)
+
+    # Secondary DB stats
     if Media2:
-        files = await Media2.count_documents()
+        files2 = await Media2.count_documents()
         size2 = await db2.get_db_size()
         free2 = 536870912 - size2
-        size2 = get_size(size2)
-        free2 = get_size(free2)
+        size2_str = get_size(size2)
+        free2_str = get_size(free2)
     else:
-        files = size2 = free2 = 0
+        files2 = size2_str = free2_str = 0
 
+    # Tertiary DB stats
     if Media3:
         files3 = await Media3.count_documents()
         size3 = await db3.get_db_size()
         free3 = 536870912 - size3
-        size3 = get_size(size3)
-        free3 = get_size(free3)
+        size3_str = get_size(size3)
+        free3_str = get_size(free3)
     else:
-        files3 = size3 = free3 = 0
+        files3 = size3_str = free3_str = 0
 
     uptime = get_readable_time(time() - botStartTime)
     ram = psutil.virtual_memory().percent
     cpu = psutil.cpu_percent()
-    await rju.edit(script.STATUS_TXT.format(total_users, totl_chats, premium, file, size, free, files, size2, free2, files3, size3, free3, uptime, ram, cpu, (int(file)+int(files or 0)+int(files3 or 0)) ))
+
+    total_files = file + (files2 or 0) + (files3 or 0)
+
+    await rju.edit(script.STATUS_TXT.format(
+        total_users, totl_chats, premium,
+        file, size_str, free_str,
+        files2, size2_str, free2_str,
+        files3, size3_str, free3_str,
+        uptime, ram, cpu, total_files
+    ))
 
 
 @Client.on_message(filters.command('invite') & filters.user(ADMINS))
