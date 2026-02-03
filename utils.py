@@ -878,3 +878,14 @@ def get_time(seconds):
             period_value, seconds = divmod(seconds, period_seconds)
             result += f'{int(period_value)}{period_name}'
     return result
+
+async def delete_after(messages, delay):
+    """Deletes messages after a certain delay in the background."""
+    await asyncio.sleep(delay)
+    if not isinstance(messages, list):
+        messages = [messages]
+    for msg in messages:
+        try:
+            await msg.delete()
+        except Exception:
+            pass

@@ -1,3 +1,4 @@
+from utils import delete_after
 import time
 import asyncio
 from pyrogram import Client, filters
@@ -14,12 +15,9 @@ CMD = ["/", "."]
 
 @Client.on_message(filters.command("alive", CMD))
 async def check_alive(_, message):
-    sticker = await message.reply_sticker("CAACAgIAAxkBAAEBVAlmCYqbLub_o5pVUOEwbqhV8kRytgACRBkAAgjh2UlSqev16oISqB4EE") 
+    sticker = await message.reply_sticker("CAACAgIAAxkBAAEBVAlmCYqbLub_o5pVUOEwbqhV8kRytgACRBkAAgjh2UlSqev16oISqB4EE")
     text = await message.reply_text("Yᴏᴜ ᴀʀᴇ ᴠᴇʀʏ ʟᴜᴄᴋʏ 🤞 I ᴀᴍ ᴀʟɪᴠᴇ ❤️\nPʀᴇss /start ᴛᴏ ᴜsᴇ ᴍᴇ!")
-    await asyncio.sleep(60)
-    await sticker.delete()
-    await text.delete()
-    await message.delete()
+    asyncio.create_task(delete_after([sticker, text, message], 60))
 
 @Client.on_message(filters.command("ping", CMD))
 async def ping(_, message):
@@ -28,9 +26,7 @@ async def ping(_, message):
     end_t = time.time()
     time_taken_s = (end_t - start_t) * 1000
     await rm.edit(f"🏓 Ping! : {time_taken_s:.3f} ms")
-    await asyncio.sleep(60)
-    await rm.delete()
-    await message.delete()
+    asyncio.create_task(delete_after([rm, message], 60))
 
 start_time = time.time()
 
@@ -95,9 +91,7 @@ async def send_system_info(client, message):
     latency = await calculate_latency() 
     full_info = f"{system_info}\n📶 **Latency:** {latency}"
     info = await message.reply_text(full_info)
-    await asyncio.sleep(60)
-    await info.delete()
-    await message.delete()
+    asyncio.create_task(delete_after([info, message], 60))
 
 
 @Client.on_message(filters.command("commands") & filters.user(ADMINS))
@@ -105,7 +99,5 @@ async def set_commands(client, message):
     commands = [BotCommand(cmd, desc) for cmd, desc in Bot_cmds.items()]
     await client.set_bot_commands(commands)
     bot_set = await message.reply("ʙᴏᴛ ᴄᴏᴍᴍᴀɴᴅs ᴜᴘᴅᴀᴛᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ✅ ")
-    await asyncio.sleep(119)  
-    await bot_set.delete()
-    await message.delete()
+    asyncio.create_task(delete_after([bot_set, message], 119))
 
