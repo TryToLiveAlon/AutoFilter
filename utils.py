@@ -664,12 +664,8 @@ async def get_token(bot, userid, link, fileid):
     link = f"{link}verify-{user.id}-{token}-{fileid}"
     shortened_verify_url = await get_verify_shorted_link(link)
 
-    # Store token and short link for intermediate redirect
-    await db.add_verify_token(user.id, token, shortened_verify_url)
-
-    # Return intermediate bot link
-    intermediate_link = f"{URL}v/{user.id}/{token}"
-    return str(intermediate_link)
+    # Return direct shortened link
+    return str(shortened_verify_url)
 
 async def get_verify_status(userid):
     status = temp.VERIFY.get(userid)

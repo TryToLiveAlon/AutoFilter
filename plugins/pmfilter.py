@@ -2794,75 +2794,68 @@ async def advantage_spell_chok(client, message):
     chat_id = message.chat.id
     settings = await get_settings(chat_id)
 
-    # Clean the query for better IMDb search
+    # Clean the query for better matching
     query = re.sub(
         r"\b(pl(i|e)*?(s|z+|ease|se|ese|(e+)s(e)?)|((send|snd|giv(e)?|gib)(\sme)?)|movie(s)?|new|latest|br((o|u)h?)*|^h(e|a)?(l)*(o)*|mal(ayalam)?|t(h)?amil|file|that|find|und(o)*|kit(t(i|y)?)?o(w)?|thar(u)?(o)*w?|kittum(o)*|aya(k)*(um(o)*)?|full\smovie|any(one)|with\ssubtitle(s)?)",
         "", search, flags=re.IGNORECASE)
     query = query.strip()
 
     if not query:
-        # If query becomes empty after cleaning, use original text but strip common words
         query = search.strip()
 
-    try:
-        movies = await get_poster(query, bulk=True)
-    except Exception as e:
-        logging.error(f"IMDb search error in advantage_spell_chok: {e}")
-        movies = []
+    # Try local DB search first with broadened query
+    broad_query = query.split()[0] if query.split() else query
+    files, _, _ = await get_search_results(chat_id, broad_query, max_results=10)
 
-    if not movies:
-        # Fallback to Google only if IMDb yields nothing
-        google = search.replace(" ", "+")
-        button = [[
-            InlineKeyboardButton("🔍 ᴅᴏ ɢᴏᴏɢʟᴇ", url=f"https://www.google.com/search?q={google}")
-        ]]
-        k = await message.reply_text(text=script.I_CUDNT.format(search), reply_markup=InlineKeyboardMarkup(button))
-        asyncio.create_task(delete_after([k, message], 60))
-        return
-
-    # Process and clean suggestions
     suggestion_list = []
     seen_titles = set()
 
-    # First, prioritize movies that actually have files in our DB
-    for movie in movies:
-        title = movie.get('title')
-        year = movie.get('year')
-        if not title or title.lower() in seen_titles:
-            continue
-
-        # Check if we have files for this title
-        files, _, _ = await get_search_results(chat_id=chat_id, query=title, max_results=1)
-        if files:
-            suggestion_list.append(movie)
-            seen_titles.add(title.lower())
-
-        if len(suggestion_list) >= 8: # Limit prioritize suggestions
-            break
-
-    # If we don't have enough suggestions from DB, add more from IMDb results
-    if len(suggestion_list) < 8:
-        for movie in movies:
-            title = movie.get('title')
-            if not title or title.lower() in seen_titles:
-                continue
-            suggestion_list.append(movie)
-            seen_titles.add(title.lower())
-            if len(suggestion_list) >= 10:
+    if files:
+        for file in files:
+            title = ' '.join(filter(lambda x: not x.startswith('[') and not x.startswith('@') and not x.startswith('www.'), file.file_name.split()))
+            if title.lower() not in seen_titles:
+                suggestion_list.append({'title': title, 'year': None, 'id': None, 'from_db': True})
+                seen_titles.add(title.lower())
+            if len(suggestion_list) >= 5:
                 break
+
+    # Fetch from IMDb if we don't have enough local suggestions
+    if len(suggestion_list) < 10:
+        try:
+            movies = await get_poster(query, bulk=True)
+            if movies:
+                for movie in movies:
+                    title = movie.get('title')
+                    if title and title.lower() not in seen_titles:
+                        suggestion_list.append({'title': title, 'year': movie.get('year'), 'id': movie.movieID, 'from_db': False})
+                        seen_titles.add(title.lower())
+                    if len(suggestion_list) >= 10:
+                        break
+        except Exception as e:
+            logging.error(f"IMDb search error in advantage_spell_chok: {e}")
+
+    if not suggestion_list:
+        # Last fallback if everything else fails - inform user
+        k = await message.reply_text(text=script.I_CUDNT.format(search))
+        asyncio.create_task(delete_after([k, message], 60))
+        return
 
     user = message.from_user.id if message.from_user else 0
     buttons = []
 
-    # Create buttons for each suggestion (2 per row for better look if titles are short, else 1)
-    for i in range(0, len(suggestion_list), 1):
-        movie = suggestion_list[i]
-        title = movie.get('title')
-        year = movie.get('year')
+    for sug in suggestion_list:
+        title = sug['title']
+        year = sug['year']
         btn_text = f"{title}" + (f" ({year})" if year else "")
-        buttons.append([
-            InlineKeyboardButton(text=btn_text, callback_data=f"spol#{movie.movieID}#{user}")
-        ])
+        if sug['from_db']:
+             # Use a different callback for DB items to just trigger a search
+             buttons.append([
+                InlineKeyboardButton(text=btn_text, switch_inline_query_current_chat=title)
+            ])
+        else:
+            buttons.append([
+                InlineKeyboardButton(text=btn_text, callback_data=f"spol#{sug['id']}#{user}")
+            ])
 
     buttons.append([
         InlineKeyboardButton(text="✘ ᴄʟᴏsᴇ ✘", callback_data='close_data')
@@ -2874,7 +2867,7 @@ async def advantage_spell_chok(client, message):
         reply_markup=InlineKeyboardMarkup(buttons),
         reply_to_message_id=message.id
     )
-    asyncio.create_task(delete_after([d, message], 120)) # Give more time to read suggestions
+    asyncio.create_task(delete_after([d, message], 120))
 
 
 async def manual_filters(client, message, text=False):

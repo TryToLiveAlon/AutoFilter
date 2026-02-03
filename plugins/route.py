@@ -22,24 +22,6 @@ routes = web.RouteTableDef()
 async def root_route_handler(request):
     return web.json_response("Lucy_Bot")
 
-@routes.get(r"/v/{user_id:\d+}/{token:\w+}", allow_head=True)
-async def verification_redirect_handler(request):
-    try:
-        user_id = request.match_info["user_id"]
-        token = request.match_info["token"]
-
-        logging.info(f"Received redirect request for user_id: {user_id}, token: {token}")
-
-        short_link = await db.get_verify_token_link(user_id, token)
-        if short_link:
-            logging.info(f"Redirecting user {user_id} to {short_link}")
-            return web.HTTPFound(short_link)
-
-        logging.warning(f"Token not found in DB: user_id={user_id}, token={token}")
-        return web.Response(text="Invalid or expired verification link. Please go back to the bot and try again.", status=404)
-    except Exception as e:
-        logging.error(f"Error in verification_redirect_handler: {e}")
-        return web.Response(text="Internal Server Error during redirect", status=500)
 
 
 @routes.get(r"/watch/{path:\S+}", allow_head=True)
