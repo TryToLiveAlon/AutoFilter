@@ -5,9 +5,17 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
-myclient = pymongo.MongoClient(DATABASE_URI)
-mydb = myclient[DATABASE_NAME]
-mycol = mydb['CONNECTION'] 
+myclient = None
+mydb = None
+mycol = None
+
+if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
+    try:
+        myclient = pymongo.MongoClient(DATABASE_URI)
+        mydb = myclient[DATABASE_NAME]
+        mycol = mydb['CONNECTION']
+    except Exception as e:
+        logger.error(f"Error initializing MongoClient in connections_mdb: {e}")
 
 
 async def add_connection(group_id, user_id):

@@ -57,14 +57,25 @@ async def Lucy_start():
             print("Lucy Bot Imported => " + plugin_name)
     if ON_HEROKU:
         asyncio.create_task(ping_server()) 
-    b_users, b_chats = await db.get_banned()
-    temp.BANNED_USERS = b_users
-    temp.BANNED_CHATS = b_chats
-    await Media.ensure_indexes()
+
+    if db:
+        b_users, b_chats = await db.get_banned()
+        temp.BANNED_USERS = b_users
+        temp.BANNED_CHATS = b_chats
+    else:
+        temp.BANNED_USERS = []
+        temp.BANNED_CHATS = []
+    if Media and clientDB:
+        await Media.ensure_indexes()
     if Media2:
         await Media2.ensure_indexes()
     if Media3:
         await Media3.ensure_indexes()
+
+    if not clientDB:
+        logging.critical("Primary MongoDB not connected! Some features will not work.")
+        return # Or handle it differently
+
     stats = await clientDB.command('dbStats')
     free_dbSize = round(512-((stats['dataSize']/(1024*1024))+(stats['indexSize']/(1024*1024))), 2)
     if free_dbSize < 62:

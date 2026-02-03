@@ -20,12 +20,22 @@ logger.setLevel(logging.INFO)
 tempDict = {'indexDB': DATABASE_URI}
 
 # Primary DB
-client = AsyncIOMotorClient(DATABASE_URI)
-db = client[DATABASE_NAME]
-instance = Instance.from_db(db)
+client = db = instance = Media = None
+if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
+    try:
+        client = AsyncIOMotorClient(DATABASE_URI)
+        db = client[DATABASE_NAME]
+        instance = Instance.from_db(db)
+    except Exception as e:
+        logger.error(f"Error initializing Primary DB client: {e}")
 
 # Primary DB Model
-@instance.register
+def register_primary(cls):
+    if instance:
+        return instance.register(cls)
+    return cls
+
+@register_primary
 class Media(Document):
     file_id = fields.StrField(attribute='_id')
     file_ref = fields.StrField(allow_none=True)
@@ -39,7 +49,9 @@ class Media(Document):
         indexes = ('$file_name', )
         collection_name = COLLECTION_NAME
 
-MediaModels = [Media]
+MediaModels = []
+if instance:
+    MediaModels.append(Media)
 
 #secondary db
 client2 = db2 = instance2 = Media2 = None

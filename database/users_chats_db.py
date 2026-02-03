@@ -6,8 +6,15 @@ import pytz
 from pymongo.errors import DuplicateKeyError
 from pymongo import MongoClient
 
-my_client = MongoClient(DATABASE_URI)
-mydb = my_client["filename"]
+my_client = None
+mydb = None
+
+if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
+    try:
+        my_client = MongoClient(DATABASE_URI)
+        mydb = my_client["filename"]
+    except Exception as e:
+        print(f"Error initializing MongoClient with DATABASE_URI: {e}")
 
 async def add_name(user_id, filename):
     user_db = mydb[str(user_id)]
@@ -313,7 +320,12 @@ class Database:
         await self.update_bot_setting(bot_id, 'MOVIE_UPDATE_NOTIFICATION', enable)
 
         
-db = Database(DATABASE_URI, DATABASE_NAME)
+db = None
+if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
+    try:
+        db = Database(DATABASE_URI, DATABASE_NAME)
+    except Exception as e:
+        print(f"Error initializing DATABASE_URI: {e}")
 
 db2 = None
 if DATABASE_URI2 and DATABASE_URI2.startswith('mongodb'):

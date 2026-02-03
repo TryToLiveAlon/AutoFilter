@@ -5,14 +5,21 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
-myclient = pymongo.MongoClient(DATABASE_URI)
-mydb = myclient[DATABASE_NAME]
+myclient = None
+mydb = None
+
+if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
+    try:
+        myclient = pymongo.MongoClient(DATABASE_URI)
+        mydb = myclient[DATABASE_NAME]
+    except Exception as e:
+        logger.error(f"Error initializing MongoClient in refer: {e}")
 
 
 class UserTracker:
     def __init__(self):
-        self.user_collection = mydb["referusers"]
-        self.refer_collection = mydb["refers"]
+        self.user_collection = mydb["referusers"] if mydb is not None else None
+        self.refer_collection = mydb["refers"] if mydb is not None else None
 
     def add_user(self, user_id):
         if not self.is_user_in_list(user_id):
