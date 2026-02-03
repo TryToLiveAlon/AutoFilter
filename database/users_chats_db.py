@@ -314,5 +314,17 @@ class Database:
 
         
 db = Database(DATABASE_URI, DATABASE_NAME)
-db2 = Database(DATABASE_URI2, DATABASE_NAME) if DATABASE_URI2 else None
-db3 = Database(DATABASE_URI3, DATABASE_NAME) if DATABASE_URI3 else None
+
+db2 = None
+if DATABASE_URI2 and DATABASE_URI2.startswith('mongodb'):
+    try:
+        db2 = Database(DATABASE_URI2, DATABASE_NAME)
+    except Exception as e:
+        print(f"Error initializing DATABASE_URI2: {e}")
+
+db3 = None
+if DATABASE_URI3 and DATABASE_URI3.startswith('mongodb'):
+    try:
+        db3 = Database(DATABASE_URI3, DATABASE_NAME)
+    except Exception as e:
+        print(f"Error initializing DATABASE_URI3: {e}")

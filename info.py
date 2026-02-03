@@ -67,9 +67,9 @@ APPROVED = environ.get("APPROVED_WELCOME", "on").lower()
 # ============================
 # MongoDB Configuration
 # ============================
-DATABASE_URI = environ.get('DATABASE_URI', "mongodb+srv://tohay49247:psDCTVL5Db2eJmgk@cluster0.xbluqix.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
-DATABASE_URI2 = environ.get('DATABASE_URI2', "mongodb+srv://RB14goCNTApsB54I:RB14goCNTApsB54I@cluster0.8qjbx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
-DATABASE_URI3 = environ.get('DATABASE_URI3', "")
+DATABASE_URI = environ.get('DATABASE_URI', "").strip()
+DATABASE_URI2 = environ.get('DATABASE_URI2', "").strip()
+DATABASE_URI3 = environ.get('DATABASE_URI3', "").strip()
 DATABASE_NAME = environ.get('DATABASE_NAME', "moviefiles")
 COLLECTION_NAME = environ.get('COLLECTION_NAME', 'Deathcollections')
 

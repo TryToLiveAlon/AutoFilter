@@ -42,50 +42,54 @@ class Media(Document):
 MediaModels = [Media]
 
 #secondary db
-if DATABASE_URI2:
-    client2 = AsyncIOMotorClient(DATABASE_URI2)
-    db2 = client2[DATABASE_NAME]
-    instance2 = Instance.from_db(db2)
+client2 = db2 = instance2 = Media2 = None
+if DATABASE_URI2 and DATABASE_URI2.startswith('mongodb'):
+    try:
+        client2 = AsyncIOMotorClient(DATABASE_URI2)
+        db2 = client2[DATABASE_NAME]
+        instance2 = Instance.from_db(db2)
 
-    @instance2.register
-    class Media2(Document):
-        file_id = fields.StrField(attribute='_id')
-        file_ref = fields.StrField(allow_none=True)
-        file_name = fields.StrField(required=True)
-        file_size = fields.IntField(required=True)
-        file_type = fields.StrField(allow_none=True)
-        mime_type = fields.StrField(allow_none=True)
-        caption = fields.StrField(allow_none=True)
+        @instance2.register
+        class Media2(Document):
+            file_id = fields.StrField(attribute='_id')
+            file_ref = fields.StrField(allow_none=True)
+            file_name = fields.StrField(required=True)
+            file_size = fields.IntField(required=True)
+            file_type = fields.StrField(allow_none=True)
+            mime_type = fields.StrField(allow_none=True)
+            caption = fields.StrField(allow_none=True)
 
-        class Meta:
-            indexes = ('$file_name', )
-            collection_name = COLLECTION_NAME
-    MediaModels.insert(0, Media2)
-else:
-    client2 = db2 = instance2 = Media2 = None
+            class Meta:
+                indexes = ('$file_name', )
+                collection_name = COLLECTION_NAME
+        MediaModels.insert(0, Media2)
+    except Exception as e:
+        logger.error(f"Error initializing DATABASE_URI2: {e}")
 
 #third db
-if DATABASE_URI3:
-    client3 = AsyncIOMotorClient(DATABASE_URI3)
-    db3 = client3[DATABASE_NAME]
-    instance3 = Instance.from_db(db3)
+client3 = db3 = instance3 = Media3 = None
+if DATABASE_URI3 and DATABASE_URI3.startswith('mongodb'):
+    try:
+        client3 = AsyncIOMotorClient(DATABASE_URI3)
+        db3 = client3[DATABASE_NAME]
+        instance3 = Instance.from_db(db3)
 
-    @instance3.register
-    class Media3(Document):
-        file_id = fields.StrField(attribute='_id')
-        file_ref = fields.StrField(allow_none=True)
-        file_name = fields.StrField(required=True)
-        file_size = fields.IntField(required=True)
-        file_type = fields.StrField(allow_none=True)
-        mime_type = fields.StrField(allow_none=True)
-        caption = fields.StrField(allow_none=True)
+        @instance3.register
+        class Media3(Document):
+            file_id = fields.StrField(attribute='_id')
+            file_ref = fields.StrField(allow_none=True)
+            file_name = fields.StrField(required=True)
+            file_size = fields.IntField(required=True)
+            file_type = fields.StrField(allow_none=True)
+            mime_type = fields.StrField(allow_none=True)
+            caption = fields.StrField(allow_none=True)
 
-        class Meta:
-            indexes = ('$file_name', )
-            collection_name = COLLECTION_NAME
-    MediaModels.insert(0, Media3)
-else:
-    client3 = db3 = instance3 = Media3 = None
+            class Meta:
+                indexes = ('$file_name', )
+                collection_name = COLLECTION_NAME
+        MediaModels.insert(0, Media3)
+    except Exception as e:
+        logger.error(f"Error initializing DATABASE_URI3: {e}")
 
 async def choose_mediaDB():
     """This Function chooses which database to use based on the value of indexDB key in the dict tempDict."""
@@ -93,12 +97,15 @@ async def choose_mediaDB():
     if tempDict['indexDB'] == DATABASE_URI:
         logger.info("Using first db (Media)")
         saveMedia = Media
-    elif tempDict['indexDB'] == DATABASE_URI2:
+    elif DATABASE_URI2 and tempDict['indexDB'] == DATABASE_URI2 and Media2:
         logger.info("Using second db (Media2)")
         saveMedia = Media2
-    else:
+    elif DATABASE_URI3 and tempDict['indexDB'] == DATABASE_URI3 and Media3:
         logger.info("Using third db (Media3)")
         saveMedia = Media3
+    else:
+        logger.info("Using fallback first db (Media)")
+        saveMedia = Media
 
 async def save_file(bot, media):
   """Save file in database"""
