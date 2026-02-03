@@ -327,7 +327,7 @@ async def advantage_spoll_choker(bot, query):
     movies = await get_poster(id, id=True)
     movie = movies.get('title')
     movie = re.sub(r"[:-]", " ", movie)
-    movie = re.sub(r"s+", " ", movie).strip()
+    movie = re.sub(r"\s+", " ", movie).strip()
     
     await query.answer(script.TOP_ALRT_MSG)
     gl = await global_filters(bot, query.message, text=movie)
@@ -2568,8 +2568,8 @@ async def auto_filter(client, msg, spoll=False):
                     continue
                 else:
                     search = search + x + " "
-            #search = re.sub(r"\b(pl(i|e)*?(s|z+|ease|se|ese|(e+)s(e)?)|((send|snd|giv(e)?|gib)(\sme)?)|movie(s)?|new|latest|bro|bruh|broh|helo|that|find|dubbed|link|venum|iruka|pannunga|pannungga|anuppunga|anupunga|anuppungga|anupungga|film|undo|kitti|kitty|tharu|kittumo|kittum|movie|any(one)|with\ssubtitle(s)?)", "", search, flags=re.IGNORECASE)
-            #search = re.sub(r"\s+", " ", search).strip()
+            search = re.sub(r"\b(pl(i|e)*?(s|z+|ease|se|ese|(e+)s(e)?)|((send|snd|giv(e)?|gib)(\sme)?)|movie(s)?|new|latest|bro|bruh|broh|helo|that|find|dubbed|link|venum|iruka|pannunga|pannungga|anuppunga|anupunga|anuppungga|anupungga|film|undo|kitti|kitty|tharu|kittumo|kittum|movie|any(one)|with\ssubtitle(s)?)", "", search, flags=re.IGNORECASE)
+            search = re.sub(r"\s+", " ", search).strip()
             search = search.replace("-", " ")
             search = search.replace(":","")
             files, offset, total_results = await get_search_results(message.chat.id ,search, offset=0, filter=True)
@@ -2788,25 +2788,35 @@ async def ai_spell_check(chat_id, wrong_name):
 
     movie_list = await asyncio.to_thread(search_imdb, wrong_name)
     if not movie_list:
-        return
+        return None
 
-    for _ in range(min(5, len(movie_list))):
-        closest_match = process.extractOne(wrong_name, movie_list)
+    movie_list_to_check = list(movie_list)
+    for _ in range(min(5, len(movie_list_to_check))):
+        closest_match = process.extractOne(wrong_name, movie_list_to_check)
         if not closest_match or closest_match[1] <= 60:
             break
 
         movie = closest_match[0]
-        files, offset, total_results = await get_search_results(chat_id=chat_id, query=movie)
-        if files:
-            return movie
+        # Normalize title for better matching
+        search_title = re.sub(r"[:-]", " ", movie)
+        search_title = re.sub(r"\s+", " ", search_title).strip()
 
-        if movie.lower().startswith("the "):
-            alt_movie = movie[4:]
+        files, offset, total_results = await get_search_results(chat_id=chat_id, query=search_title)
+        if files:
+            return search_title
+
+        if search_title.lower().startswith("the "):
+            alt_movie = search_title[4:]
+            files, offset, total_results = await get_search_results(chat_id=chat_id, query=alt_movie)
+            if files:
+                return alt_movie
+        else:
+            alt_movie = "The " + search_title
             files, offset, total_results = await get_search_results(chat_id=chat_id, query=alt_movie)
             if files:
                 return alt_movie
 
-        movie_list.remove(movie)
+        movie_list_to_check.remove(movie)
     return None
 
 async def advantage_spell_chok(client, message):
@@ -2842,11 +2852,32 @@ async def advantage_spell_chok(client, message):
         except:
             pass
         return
+    # Filter movies that have files in the bot to provide better suggestions
+    valid_movies = []
+    for movie in movies:
+        title = movie.get('title')
+        if not title:
+            continue
+        files, _, _ = await get_search_results(chat_id=message.chat.id, query=title, max_results=1)
+        if files:
+            valid_movies.append(movie)
+        elif title.lower().startswith("the "):
+            files, _, _ = await get_search_results(chat_id=message.chat.id, query=title[4:], max_results=1)
+            if files:
+                valid_movies.append(movie)
+        else:
+            files, _, _ = await get_search_results(chat_id=message.chat.id, query="The " + title, max_results=1)
+            if files:
+                valid_movies.append(movie)
+
+    if not valid_movies:
+        valid_movies = movies[:10]
+
     user = message.from_user.id if message.from_user else 0
     buttons = [[
-        InlineKeyboardButton(text=movie.get('title'), callback_data=f"spol#{movie.movieID}#{user}")
+        InlineKeyboardButton(text=f"{movie.get('title')} ({movie.get('year')})", callback_data=f"spol#{movie.movieID}#{user}")
     ]
-        for movie in movies
+        for movie in valid_movies
     ]
     buttons.append(
         [InlineKeyboardButton(text="ᴄʟᴏsᴇ", callback_data='close_data')]
