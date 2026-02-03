@@ -45,13 +45,19 @@ class script(object):
 ├⋟ 🎤 size ➤ <code>{}</code>
 ├⋟ 🎭 free ➤ <code>{}</code>
 │
+<b>├────[ 🗳 ᴅᴀᴛᴀʙᴀsᴇ 3 🗳 ]────⍟</b>
+│
+├⋟ 🎬 ᴀʟʟ ꜰɪʟᴇs ➤ <code>{}</code>
+├⋟ 🎤 size ➤ <code>{}</code>
+├⋟ 🎭 free ➤ <code>{}</code>
+│
 <b>├────[ 🤖 ʙᴏᴛ ᴅᴇᴛᴀɪʟs 🤖 ]────⍟</b>   
 │
 ├⋟ ⏱ Bᴏᴛ Uᴘᴛɪᴍᴇ ➤ {}
 ├⋟ 🌐 ʀᴀᴍ ➤ <code>{}%</code>
 ├⋟ 🤖 ᴄᴘᴜ ➤ <code>{}%</code>   
 │
-├⋟ 🗼 Bᴏᴛʜ DBs Fɪʟᴇs: <code>{}</code>
+├⋟ 🗼 Total DBs Fɪʟᴇs: <code>{}</code>
 │
 <b>╰─────────────────────⍟</b>"""
 

@@ -21,7 +21,7 @@ from utils import *
 from fuzzywuzzy import process
 from database.users_chats_db import db
 from database.config_db import mdb
-from database.ia_filterdb import Media, Media2, get_file_details, get_search_results, get_bad_files
+from database.ia_filterdb import Media, Media2, Media3, get_file_details, get_search_results, get_bad_files, MediaModels
 from database.filters_mdb import (
     del_all,
     find_filter,
@@ -1231,13 +1231,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 for file in files:
                     file_ids = file.file_id
                     file_name = file.file_name
-                    result = await Media.collection.delete_one({
-                        '_id': file_ids,
-                    })
-                    if not result.deleted_count:
-                        result = await Media2.collection.delete_one({
-                            '_id': file_ids,
-                        })
+                    for model in MediaModels:
+                        result = await model.collection.delete_one({'_id': file_ids})
+                        if result.deleted_count:
+                            break
                     if result.deleted_count:
                         logger.info(f'ꜰɪʟᴇ ꜰᴏᴜɴᴅ ꜰᴏʀ ʏᴏᴜʀ ǫᴜᴇʀʏ {keyword}! ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ {file_name} ꜰʀᴏᴍ ᴅᴀᴛᴀʙᴀꜱᴇ.')
                     deleted += 1

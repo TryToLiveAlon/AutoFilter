@@ -58,6 +58,10 @@
             "description": "mongoDB URI. Get this value from https://www.mongodb.com.",
             "required": true
         },
+        "DATABASE_URI3": {
+            "description": "mongoDB URI. Get this value from https://www.mongodb.com.",
+            "required": false
+        },
         "DATABASE_URI2": {
             "description": "mongoDB URI. Get this value from https://www.mongodb.com.",
             "required": true

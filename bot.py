@@ -12,7 +12,7 @@ from datetime import date, datetime
 import pytz
 from aiohttp import web
 
-from database.ia_filterdb import Media, Media2, choose_mediaDB, tempDict, db as clientDB
+from database.ia_filterdb import Media, Media2, Media3, choose_mediaDB, tempDict, db as clientDB, db2, db3
 from database.users_chats_db import db
 from info import *
 from utils import temp
@@ -61,17 +61,31 @@ async def Lucy_start():
     temp.BANNED_USERS = b_users
     temp.BANNED_CHATS = b_chats
     await Media.ensure_indexes()
-    await Media2.ensure_indexes()
+    if Media2:
+        await Media2.ensure_indexes()
+    if Media3:
+        await Media3.ensure_indexes()
     stats = await clientDB.command('dbStats')
     free_dbSize = round(512-((stats['dataSize']/(1024*1024))+(stats['indexSize']/(1024*1024))), 2)
-    if DATABASE_URI2 and free_dbSize<62: #if the primary db have less than 62MB left, use second DB.
-        tempDict["indexDB"] = DATABASE_URI2
-        logging.info(f"Since Primary DB have only {free_dbSize} MB left, Secondary DB will be used to store datas.")
-    elif DATABASE_URI2 is None:
-        logging.error("Missing second DB URI !\n\nAdd SECONDDB_URI now !\n\nExiting...")
-        exit()
+    if free_dbSize < 62:
+        if db2:
+            stats2 = await db2.command('dbStats')
+            free_dbSize2 = round(512-((stats2['dataSize']/(1024*1024))+(stats2['indexSize']/(1024*1024))), 2)
+            if free_dbSize2 < 62:
+                if db3:
+                    tempDict["indexDB"] = DATABASE_URI3
+                    logging.info(f"Since Primary and Secondary DBs are full, Tertiary DB will be used.")
+                else:
+                    logging.warning("Primary and Secondary DBs are full, and DATABASE_URI3 is missing. Using Secondary DB.")
+                    tempDict["indexDB"] = DATABASE_URI2
+            else:
+                tempDict["indexDB"] = DATABASE_URI2
+                logging.info(f"Since Primary DB is full, Secondary DB will be used.")
+        else:
+            logging.error("Primary DB is full, and DATABASE_URI2 is missing!")
     else:
-        logging.info(f"Since primary DB have enough space ({free_dbSize}MB) left, It will be used for storing datas.")
+        tempDict["indexDB"] = DATABASE_URI
+        logging.info(f"Using Primary DB for indexing.")
     await choose_mediaDB()    
     me = await Codeflix.get_me()
     temp.ME = me.id
