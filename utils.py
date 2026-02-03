@@ -528,36 +528,6 @@ async def get_shortlink(chat_id, link):
         URL = SHORTLINK_URL
         API = SHORTLINK_API
     if URL == "api.shareus.io":
-        # method 1:
-        # https = link.split(":")[0] #splitting https or http from link
-        # if "http" == https: #if https == "http":
-        #     https = "https"
-        #     link = link.replace("http", https) #replacing http to https
-        # conn = http.client.HTTPSConnection("api.shareus.io")
-        # payload = json.dumps({
-        #   "api_key": "4c1YTBacB6PTuwogBiEIFvZN5TI3",
-        #   "monetization": True,
-        #   "destination": link,
-        #   "ad_page": 3,
-        #   "category": "Entertainment",
-        #   "tags": ["trendinglinks"],
-        #   "monetize_with_money": False,
-        #   "price": 0,
-        #   "currency": "INR",
-        #   "purchase_note":""
-        
-        # })
-        # headers = {
-        #   'Keep-Alive': '',
-        #   'Content-Type': 'application/json'
-        # }
-        # conn.request("POST", "/generate_link", payload, headers)
-        # res = conn.getresponse()
-        # data = res.read().decode("utf-8")
-        # parsed_data = json.loads(data)
-        # if parsed_data["status"] == "success":
-        #   return parsed_data["link"]
-    #method 2
         url = f'https://{URL}/easy_api'
         params = {
             "key": API,
@@ -567,9 +537,13 @@ async def get_shortlink(chat_id, link):
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
                     data = await response.text()
-                    return data
+                    if data.startswith("http"):
+                        return data
+                    else:
+                        logger.error(f"Shareus Error: {data}")
+                        return link
         except Exception as e:
-            logger.error(e)
+            logger.error(f"Shareus Exception: {e}")
             return link
     else:
         shortzy = Shortzy(api_key=API, base_site=URL)
@@ -590,48 +564,57 @@ async def get_tutorial(chat_id):
 async def get_verify_shorted_link(link):
     API = SHORTLINK_API
     URL = SHORTLINK_URL
-    https = link.split(":")[0]
-    if "http" == https:
-        https = "https"
-        link = link.replace("http", https)
+
+    # Ensure URL is encoded for the API call
+    # Note: aiohttp handles parameter encoding automatically if passed as a dict
 
     if URL == "api.shareus.in":
         url = f"https://{URL}/shortLink"
-        params = {"token": API,
-                  "format": "json",
-                  "link": link,
-                  }
+        params = {
+            "token": API,
+            "format": "json",
+            "link": link,
+        }
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
                     data = await response.json(content_type="text/html")
-                    if data["status"] == "success":
+                    if data.get("status") == "success":
                         return data["shortlink"]
                     else:
-                        logger.error(f"Error: {data['message']}")
-                        return f'https://{URL}/shortLink?token={API}&format=json&link={link}'
-
+                        logger.error(f"Shareus Error: {data.get('message', 'Unknown error')}")
         except Exception as e:
-            logger.error(e)
-            return f'https://{URL}/shortLink?token={API}&format=json&link={link}'
+            logger.error(f"Shareus Exception: {e}")
+
     else:
         url = f'https://{URL}/api'
-        params = {'api': API,
-                  'url': link,
-                  }
+        # Some shorteners use 'link', some use 'url'. We try 'url' first as it's common.
+        params = {
+            'api': API,
+            'url': link,
+        }
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
+                    # Generic shorteners usually return JSON
                     data = await response.json()
-                    if data["status"] == "success":
-                        return data['shortenedUrl']
+                    if data.get("status") == "success":
+                        return data.get('shortenedUrl')
                     else:
-                        logger.error(f"Error: {data['message']}")
-                        return f'https://{URL}/api?api={API}&link={link}'
+                        logger.error(f"Shortener Error: {data.get('message', 'Unknown error')}")
 
+                        # Some shorteners might need 'link' instead of 'url'
+                        params = {'api': API, 'link': link}
+                        async with session.get(url, params=params, raise_for_status=True, ssl=False) as response2:
+                            data2 = await response2.json()
+                            if data2.get("status") == "success":
+                                return data2.get('shortenedUrl')
         except Exception as e:
-            logger.error(e)
-            return f'{URL}/api?api={API}&link={link}'
+            logger.error(f"Shortener Exception: {e}")
+
+    # Fallback: Always return the original link if shortening fails
+    # NEVER return the raw API URL as it exposes the API key and is unusable for the user
+    return link
 
 async def check_token(bot, userid, token):
     user = await bot.get_users(userid)
