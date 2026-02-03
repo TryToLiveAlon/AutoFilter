@@ -17,6 +17,8 @@ if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
         print(f"Error initializing MongoClient with DATABASE_URI: {e}")
 
 async def add_name(user_id, filename):
+    if mydb is None:
+        return False
     user_db = mydb[str(user_id)]
     user = {'_id': filename}
     existing_user = user_db.find_one({'_id': filename})
@@ -29,6 +31,8 @@ async def add_name(user_id, filename):
         return False
       
 async def delete_all_msg(user_id):
+    if mydb is None:
+        return
     user_db = mydb[str(user_id)]
     user_db.delete_many({})
 
@@ -301,7 +305,11 @@ class Database:
         )
 
     async def get_verify_token_link(self, user_id, token):
-        user = await self.col.find_one({'id': int(user_id)})
+        try:
+            uid = int(user_id)
+        except (ValueError, TypeError, OverflowError):
+            return None
+        user = await self.col.find_one({'id': uid})
         if user:
             tokens = user.get('verify_tokens', {})
             return tokens.get(token)

@@ -22,7 +22,7 @@ routes = web.RouteTableDef()
 async def root_route_handler(request):
     return web.json_response("Lucy_Bot")
 
-@routes.get(r"/v/{user_id}/{token}", allow_head=True)
+@routes.get("/v/{user_id}/{token}", allow_head=True)
 async def verification_redirect_handler(request):
     user_id = request.match_info["user_id"]
     token = request.match_info["token"]
@@ -34,16 +34,27 @@ async def verification_redirect_handler(request):
 
 
 @routes.get(r"/watch/{path:\S+}", allow_head=True)
-async def stream_handler(request: web.Request):
+async def stream_watch_handler(request: web.Request):
     try:
         path = request.match_info["path"]
+        if path.startswith("v/"): # Safety check to avoid matching verification links
+             raise web.HTTPNotFound(text="Not a stream link")
+
         match = re.search(r"^([a-zA-Z0-9_-]{6})(\d+)$", path)
         if match:
             secure_hash = match.group(1)
             id = int(match.group(2))
         else:
-            id = int(re.search(r"(\d+)(?:\/\S+)?", path).group(1))
+            match_id = re.search(r"(\d+)(?:\/\S+)?", path)
+            if not match_id:
+                 return web.HTTPNotFound(text="Invalid stream link format")
+            id = int(match_id.group(1))
             secure_hash = request.rel_url.query.get("hash")
+
+        # Guard against extremely large IDs that might be user IDs instead of message IDs
+        if id > 10000000000: # Message IDs are unlikely to be this large
+             return web.HTTPBadRequest(text="Invalid ID")
+
         return web.Response(text=await render_page(id, secure_hash), content_type='text/html')
     except InvalidHash as e:
         raise web.HTTPForbidden(text=e.message)
@@ -56,16 +67,26 @@ async def stream_handler(request: web.Request):
         raise web.HTTPInternalServerError(text=str(e))
 
 @routes.get(r"/{path:\S+}", allow_head=True)
-async def stream_handler(request: web.Request):
+async def stream_media_handler(request: web.Request):
     try:
         path = request.match_info["path"]
+        if path.startswith("v/"): # Safety check
+             raise web.HTTPNotFound(text="Not a stream link")
+
         match = re.search(r"^([a-zA-Z0-9_-]{6})(\d+)$", path)
         if match:
             secure_hash = match.group(1)
             id = int(match.group(2))
         else:
-            id = int(re.search(r"(\d+)(?:\/\S+)?", path).group(1))
+            match_id = re.search(r"(\d+)(?:\/\S+)?", path)
+            if not match_id:
+                 return web.HTTPNotFound(text="Invalid link format")
+            id = int(match_id.group(1))
             secure_hash = request.rel_url.query.get("hash")
+
+        if id > 10000000000:
+             return web.HTTPBadRequest(text="Invalid ID")
+
         return await media_streamer(request, id, secure_hash)
     except InvalidHash as e:
         raise web.HTTPForbidden(text=e.message)
