@@ -13,6 +13,7 @@ from LucyBot.util.custom_dl import ByteStreamer
 from LucyBot.util.time_format import get_readable_time
 from LucyBot.util.render_template import render_page
 from info import *
+from database.users_chats_db import db
 
 
 routes = web.RouteTableDef()
@@ -20,6 +21,16 @@ routes = web.RouteTableDef()
 @routes.get("/", allow_head=True)
 async def root_route_handler(request):
     return web.json_response("Lucy_Bot")
+
+@routes.get(r"/v/{user_id}/{token}", allow_head=True)
+async def verification_redirect_handler(request):
+    user_id = request.match_info["user_id"]
+    token = request.match_info["token"]
+
+    short_link = await db.get_verify_token_link(user_id, token)
+    if short_link:
+        return web.HTTPFound(short_link)
+    return web.HTTPNotFound(text="Invalid or expired verification link")
 
 
 @routes.get(r"/watch/{path:\S+}", allow_head=True)

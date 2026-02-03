@@ -6,6 +6,7 @@ from database.ia_filterdb import get_search_results
 from utils import is_req_subscribed, get_size, temp, check_verification
 from info import CACHE_TIME, AUTH_USERS, AUTH_CHANNEL, CUSTOM_FILE_CAPTION, VERIFY
 from database.connections_mdb import active_connection
+from database.users_chats_db import db
 
 logger = logging.getLogger(__name__)
 cache_time = 0 if AUTH_USERS or AUTH_CHANNEL else CACHE_TIME
@@ -23,6 +24,12 @@ async def inline_users(query: InlineQuery):
 @Client.on_inline_query()
 async def answer(bot, query):
     """Show search results for given inline query"""
+    if await db.is_user_temp_banned(query.from_user.id):
+        await query.answer(results=[],
+                           cache_time=0,
+                           switch_pm_text='You are temporarily banned for bypass attempt.',
+                           switch_pm_parameter="temp_banned")
+        return
     chat_id = await active_connection(str(query.from_user.id))
     
     if not await inline_users(query):

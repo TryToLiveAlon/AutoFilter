@@ -12,7 +12,8 @@ import pytz
 import random 
 import re
 import os
-from datetime import datetime, date, time, timedelta
+import time
+from datetime import datetime, date, time as dt_time, timedelta
 import string
 from typing import List
 from database.users_chats_db import db
@@ -649,15 +650,26 @@ async def check_token(bot, userid, token):
         return False
 
 async def get_token(bot, userid, link, fileid):
+    if await db.is_user_temp_banned(userid):
+        return f"https://telegram.me/{temp.U_NAME}?start=temp_banned"
     user = await bot.get_users(userid)
     if not await db.is_user_exist(user.id):
         await db.add_user(user.id, user.first_name)
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
     token = ''.join(random.choices(string.ascii_letters + string.digits, k=7))
     TOKENS[user.id] = {token: False}
+    # Store start time for bypass detection
+    await db.update_verification_start_time(user.id, time.time())
+
     link = f"{link}verify-{user.id}-{token}-{fileid}"
     shortened_verify_url = await get_verify_shorted_link(link)
-    return str(shortened_verify_url)
+
+    # Store token and short link for intermediate redirect
+    await db.add_verify_token(user.id, token, shortened_verify_url)
+
+    # Return intermediate bot link
+    intermediate_link = f"{URL}v/{user.id}/{token}"
+    return str(intermediate_link)
 
 async def get_verify_status(userid):
     status = temp.VERIFY.get(userid)
@@ -696,14 +708,14 @@ async def check_verification(bot, userid):
     now = datetime.now(tz)
     curr_time = now.strftime("%H:%M:%S")
     hour1, minute1, second1 = curr_time.split(":")
-    curr_time = time(int(hour1), int(minute1), int(second1))
+    curr_time = dt_time(int(hour1), int(minute1), int(second1))
     status = await get_verify_status(user.id)
     date_var = status["date"]
     time_var = status["time"]
     years, month, day = date_var.split('-')
     comp_date = date(int(years), int(month), int(day))
     hour, minute, second = time_var.split(":")
-    comp_time = time(int(hour), int(minute), int(second))
+    comp_time = dt_time(int(hour), int(minute), int(second))
     if comp_date<today:
         return False
     else:
