@@ -2548,7 +2548,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
 async def auto_filter(client, msg, spoll=False):
     if not spoll:
         if await db.is_user_temp_banned(msg.from_user.id):
-            await msg.reply_text("<b>You are temporarily banned for attempting to bypass verification. Please wait until your ban expires.</b>")
+            await msg.reply_text(
+                "<b>Bypass detected. You are temporarily banned for 60 seconds. If you are caught again, you may be permanently banned.</b>",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Support", url="https://t.me/death_movies")]])
+            )
             return
     curr_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
     # reqstr1 = msg.from_user.id if msg.from_user else 0
