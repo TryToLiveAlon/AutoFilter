@@ -6,10 +6,19 @@ import pytz
 from pymongo.errors import DuplicateKeyError
 from pymongo import MongoClient
 
-my_client = MongoClient(DATABASE_URI)
-mydb = my_client["filename"]
+my_client = None
+mydb = None
+
+if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
+    try:
+        my_client = MongoClient(DATABASE_URI)
+        mydb = my_client["filename"]
+    except Exception as e:
+        print(f"Error initializing MongoClient with DATABASE_URI: {e}")
 
 async def add_name(user_id, filename):
+    if mydb is None:
+        return False
     user_db = mydb[str(user_id)]
     user = {'_id': filename}
     existing_user = user_db.find_one({'_id': filename})
@@ -22,6 +31,8 @@ async def add_name(user_id, filename):
         return False
       
 async def delete_all_msg(user_id):
+    if mydb is None:
+        return
     user_db = mydb[str(user_id)]
     user_db.delete_many({})
 
@@ -266,6 +277,56 @@ class Database:
             upsert=True
         )
 
+    async def update_verification_start_time(self, user_id, timestamp):
+        await self.col.update_one({'id': int(user_id)}, {'$set': {'verification_start_time': timestamp}})
+
+    async def get_verification_start_time(self, user_id):
+        user = await self.col.find_one({'id': int(user_id)})
+        if user:
+            return user.get('verification_start_time', 0)
+        return 0
+
+    async def temp_ban_user(self, user_id, duration):
+        expiry = datetime.datetime.now() + datetime.timedelta(seconds=duration)
+        await self.col.update_one({'id': int(user_id)}, {'$set': {'temp_ban_expiry': expiry}})
+
+    async def is_user_temp_banned(self, user_id):
+        user = await self.col.find_one({'id': int(user_id)})
+        if user:
+            expiry = user.get('temp_ban_expiry')
+            if expiry and datetime.datetime.now() < expiry:
+                return True
+        return False
+
+    async def add_verify_token(self, user_id, token, short_link):
+        try:
+            uid = int(user_id)
+            await self.col.update_one(
+                {'id': uid},
+                {'$set': {f'verify_tokens.{token}': short_link}},
+                upsert=True
+            )
+        except Exception as e:
+            print(f"Error in add_verify_token: {e}")
+
+    async def get_verify_token_link(self, user_id, token):
+        try:
+            uid = int(user_id)
+        except (ValueError, TypeError, OverflowError):
+            print(f"Invalid user_id in get_verify_token_link: {user_id}")
+            return None
+
+        user = await self.col.find_one({'id': uid})
+        if user:
+            tokens = user.get('verify_tokens', {})
+            link = tokens.get(token)
+            if not link:
+                print(f"Token {token} not found for user {uid}. Available tokens: {list(tokens.keys())}")
+            return link
+        else:
+            print(f"User {uid} not found in database during token lookup.")
+        return None
+
     async def pm_search_status(self, bot_id):
         return await self.get_bot_setting(bot_id, 'PM_SEARCH', PM_SEARCH)
 
@@ -279,5 +340,23 @@ class Database:
         await self.update_bot_setting(bot_id, 'MOVIE_UPDATE_NOTIFICATION', enable)
 
         
-db = Database(DATABASE_URI, DATABASE_NAME)
-db2 = Database(DATABASE_URI2, DATABASE_NAME)
+db = None
+if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
+    try:
+        db = Database(DATABASE_URI, DATABASE_NAME)
+    except Exception as e:
+        print(f"Error initializing DATABASE_URI: {e}")
+
+db2 = None
+if DATABASE_URI2 and DATABASE_URI2.startswith('mongodb'):
+    try:
+        db2 = Database(DATABASE_URI2, DATABASE_NAME)
+    except Exception as e:
+        print(f"Error initializing DATABASE_URI2: {e}")
+
+db3 = None
+if DATABASE_URI3 and DATABASE_URI3.startswith('mongodb'):
+    try:
+        db3 = Database(DATABASE_URI3, DATABASE_NAME)
+    except Exception as e:
+        print(f"Error initializing DATABASE_URI3: {e}")

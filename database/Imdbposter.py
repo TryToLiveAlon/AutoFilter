@@ -57,26 +57,32 @@ async def get_movie_details(query, id=False, file=None):
             else:
                 year = None
 
-            movieid = ia.search_movie(title.lower(), results=10)
-            if not movieid:
+            def _search():
+                return ia.search_movie(title.lower(), results=10)
+
+            movieid_list = await asyncio.to_thread(_search)
+            if not movieid_list:
                 return None
 
             if year:
-                filtered = list(filter(lambda k: str(k.get('year')) == str(year), movieid))
+                filtered = list(filter(lambda k: str(k.get('year')) == str(year), movieid_list))
                 if not filtered:
-                    filtered = movieid
+                    filtered = movieid_list
             else:
-                filtered = movieid
+                filtered = movieid_list
 
-            movieid = list(filter(lambda k: k.get('kind') in ['movie', 'tv series'], filtered))
-            if not movieid:
-                movieid = filtered
+            movieid_list = list(filter(lambda k: k.get('kind') in ['movie', 'tv series'], filtered))
+            if not movieid_list:
+                movieid_list = filtered
 
-            movieid = movieid[0].movieID
+            movieid = movieid_list[0].movieID
         else:
             movieid = query
 
-        movie = ia.get_movie(movieid)
+        def _get_movie():
+            return ia.get_movie(movieid)
+
+        movie = await asyncio.to_thread(_get_movie)
         if movie.get("original air date"):
             date = movie["original air date"]
         elif movie.get("year"):

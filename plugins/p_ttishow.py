@@ -4,8 +4,8 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from pyrogram.errors.exceptions.bad_request_400 import MessageTooLong, PeerIdInvalid
 from info import *
-from database.users_chats_db import db, db2
-from database.ia_filterdb import Media, Media2
+from database.users_chats_db import db, db2, db3
+from database.ia_filterdb import Media, Media2, Media3
 from utils import get_size, temp, get_settings, get_readable_time
 from Script import script
 from pyrogram.errors import ChatAdminRequired
@@ -166,20 +166,51 @@ async def get_ststs(bot, message):
     total_users = await db.total_users_count()
     totl_chats = await db.total_chat_count()
     premium = await db.all_premium_users()
-    file = await Media.count_documents()
-    size = await db.get_db_size()
-    free = 536870912 - size
-    size = get_size(size)
-    free = get_size(free)
-    files = await Media2.count_documents()
-    size2 = await db2.get_db_size()
-    free2 = 536870912 - size2
-    size2 = get_size(size2)
-    free2 = get_size(free2)
+
+    # Primary DB stats
+    if Media is not None:
+        file = await Media.count_documents()
+        size = await db.get_db_size()
+        free = 536870912 - size
+        size_str = get_size(size)
+        free_str = get_size(free)
+    else:
+        file = 0
+        size_str = free_str = "0 B"
+
+    # Secondary DB stats
+    if Media2 is not None:
+        files2 = await Media2.count_documents()
+        size2 = await db2.get_db_size()
+        free2 = 536870912 - size2
+        size2_str = get_size(size2)
+        free2_str = get_size(free2)
+    else:
+        files2 = size2_str = free2_str = 0
+
+    # Tertiary DB stats
+    if Media3 is not None:
+        files3 = await Media3.count_documents()
+        size3 = await db3.get_db_size()
+        free3 = 536870912 - size3
+        size3_str = get_size(size3)
+        free3_str = get_size(free3)
+    else:
+        files3 = size3_str = free3_str = 0
+
     uptime = get_readable_time(time() - botStartTime)
     ram = psutil.virtual_memory().percent
     cpu = psutil.cpu_percent()
-    await rju.edit(script.STATUS_TXT.format(total_users, totl_chats, premium, file, size, free, files, size2, free2, uptime, ram, cpu, (int(file)+int(files)) ))
+
+    total_files = file + (files2 or 0) + (files3 or 0)
+
+    await rju.edit(script.STATUS_TXT.format(
+        total_users, totl_chats, premium,
+        file, size_str, free_str,
+        files2, size2_str, free2_str,
+        files3, size3_str, free3_str,
+        uptime, ram, cpu, total_files
+    ))
 
 
 @Client.on_message(filters.command('invite') & filters.user(ADMINS))

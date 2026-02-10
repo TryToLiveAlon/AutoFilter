@@ -12,7 +12,8 @@ import pytz
 import random 
 import re
 import os
-from datetime import datetime, date, time, timedelta
+import time
+from datetime import datetime, date, time as dt_time, timedelta
 import string
 from typing import List
 from database.users_chats_db import db
@@ -116,7 +117,14 @@ async def get_poster(query, bulk=False, id=False, file=None):
                 year = list_to_str(year[:1]) 
         else:
             year = None
-        movieid = imdb.search_movie(title.lower(), results=10)
+
+        def search_imdb(t):
+            try:
+                return imdb.search_movie(t, results=10)
+            except:
+                return []
+
+        movieid = await asyncio.to_thread(search_imdb, title.lower())
         if not movieid:
             return None
         if year:
@@ -133,7 +141,16 @@ async def get_poster(query, bulk=False, id=False, file=None):
         movieid = movieid[0].movieID
     else:
         movieid = query
-    movie = imdb.get_movie(movieid)
+
+    def get_imdb_movie(mid):
+        try:
+            return imdb.get_movie(mid)
+        except:
+            return None
+
+    movie = await asyncio.to_thread(get_imdb_movie, movieid)
+    if not movie:
+        return None
     if movie.get("original air date"):
         date = movie["original air date"]
     elif movie.get("year"):
@@ -313,11 +330,9 @@ def list_to_str(k):
         return "N/A"
     elif len(k) == 1:
         return str(k[0])
-    elif MAX_LIST_ELM:
+    if MAX_LIST_ELM:
         k = k[:int(MAX_LIST_ELM)]
-        return ' '.join(f'{elem}, ' for elem in k)
-    else:
-        return ' '.join(f'{elem}, ' for elem in k)
+    return ', '.join(map(str, k))
 
 def last_online(from_user):
     time = ""
@@ -513,36 +528,6 @@ async def get_shortlink(chat_id, link):
         URL = SHORTLINK_URL
         API = SHORTLINK_API
     if URL == "api.shareus.io":
-        # method 1:
-        # https = link.split(":")[0] #splitting https or http from link
-        # if "http" == https: #if https == "http":
-        #     https = "https"
-        #     link = link.replace("http", https) #replacing http to https
-        # conn = http.client.HTTPSConnection("api.shareus.io")
-        # payload = json.dumps({
-        #   "api_key": "4c1YTBacB6PTuwogBiEIFvZN5TI3",
-        #   "monetization": True,
-        #   "destination": link,
-        #   "ad_page": 3,
-        #   "category": "Entertainment",
-        #   "tags": ["trendinglinks"],
-        #   "monetize_with_money": False,
-        #   "price": 0,
-        #   "currency": "INR",
-        #   "purchase_note":""
-        
-        # })
-        # headers = {
-        #   'Keep-Alive': '',
-        #   'Content-Type': 'application/json'
-        # }
-        # conn.request("POST", "/generate_link", payload, headers)
-        # res = conn.getresponse()
-        # data = res.read().decode("utf-8")
-        # parsed_data = json.loads(data)
-        # if parsed_data["status"] == "success":
-        #   return parsed_data["link"]
-    #method 2
         url = f'https://{URL}/easy_api'
         params = {
             "key": API,
@@ -552,9 +537,13 @@ async def get_shortlink(chat_id, link):
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
                     data = await response.text()
-                    return data
+                    if data.startswith("http"):
+                        return data
+                    else:
+                        logger.error(f"Shareus Error: {data}")
+                        return link
         except Exception as e:
-            logger.error(e)
+            logger.error(f"Shareus Exception: {e}")
             return link
     else:
         shortzy = Shortzy(api_key=API, base_site=URL)
@@ -575,48 +564,57 @@ async def get_tutorial(chat_id):
 async def get_verify_shorted_link(link):
     API = SHORTLINK_API
     URL = SHORTLINK_URL
-    https = link.split(":")[0]
-    if "http" == https:
-        https = "https"
-        link = link.replace("http", https)
+
+    # Ensure URL is encoded for the API call
+    # Note: aiohttp handles parameter encoding automatically if passed as a dict
 
     if URL == "api.shareus.in":
         url = f"https://{URL}/shortLink"
-        params = {"token": API,
-                  "format": "json",
-                  "link": link,
-                  }
+        params = {
+            "token": API,
+            "format": "json",
+            "link": link,
+        }
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
                     data = await response.json(content_type="text/html")
-                    if data["status"] == "success":
+                    if data.get("status") == "success":
                         return data["shortlink"]
                     else:
-                        logger.error(f"Error: {data['message']}")
-                        return f'https://{URL}/shortLink?token={API}&format=json&link={link}'
-
+                        logger.error(f"Shareus Error: {data.get('message', 'Unknown error')}")
         except Exception as e:
-            logger.error(e)
-            return f'https://{URL}/shortLink?token={API}&format=json&link={link}'
+            logger.error(f"Shareus Exception: {e}")
+
     else:
         url = f'https://{URL}/api'
-        params = {'api': API,
-                  'url': link,
-                  }
+        # Some shorteners use 'link', some use 'url'. We try 'url' first as it's common.
+        params = {
+            'api': API,
+            'url': link,
+        }
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
+                    # Generic shorteners usually return JSON
                     data = await response.json()
-                    if data["status"] == "success":
-                        return data['shortenedUrl']
+                    if data.get("status") == "success":
+                        return data.get('shortenedUrl')
                     else:
-                        logger.error(f"Error: {data['message']}")
-                        return f'https://{URL}/api?api={API}&link={link}'
+                        logger.error(f"Shortener Error: {data.get('message', 'Unknown error')}")
 
+                        # Some shorteners might need 'link' instead of 'url'
+                        params = {'api': API, 'link': link}
+                        async with session.get(url, params=params, raise_for_status=True, ssl=False) as response2:
+                            data2 = await response2.json()
+                            if data2.get("status") == "success":
+                                return data2.get('shortenedUrl')
         except Exception as e:
-            logger.error(e)
-            return f'{URL}/api?api={API}&link={link}'
+            logger.error(f"Shortener Exception: {e}")
+
+    # Fallback: Always return the original link if shortening fails
+    # NEVER return the raw API URL as it exposes the API key and is unusable for the user
+    return link
 
 async def check_token(bot, userid, token):
     user = await bot.get_users(userid)
@@ -635,14 +633,21 @@ async def check_token(bot, userid, token):
         return False
 
 async def get_token(bot, userid, link, fileid):
+    if await db.is_user_temp_banned(userid):
+        return f"https://telegram.me/{temp.U_NAME}?start=temp_banned"
     user = await bot.get_users(userid)
     if not await db.is_user_exist(user.id):
         await db.add_user(user.id, user.first_name)
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
     token = ''.join(random.choices(string.ascii_letters + string.digits, k=7))
     TOKENS[user.id] = {token: False}
+    # Store start time for bypass detection
+    await db.update_verification_start_time(user.id, time.time())
+
     link = f"{link}verify-{user.id}-{token}-{fileid}"
     shortened_verify_url = await get_verify_shorted_link(link)
+
+    # Return direct shortened link
     return str(shortened_verify_url)
 
 async def get_verify_status(userid):
@@ -682,14 +687,14 @@ async def check_verification(bot, userid):
     now = datetime.now(tz)
     curr_time = now.strftime("%H:%M:%S")
     hour1, minute1, second1 = curr_time.split(":")
-    curr_time = time(int(hour1), int(minute1), int(second1))
+    curr_time = dt_time(int(hour1), int(minute1), int(second1))
     status = await get_verify_status(user.id)
     date_var = status["date"]
     time_var = status["time"]
     years, month, day = date_var.split('-')
     comp_date = date(int(years), int(month), int(day))
     hour, minute, second = time_var.split(":")
-    comp_time = time(int(hour), int(minute), int(second))
+    comp_time = dt_time(int(hour), int(minute), int(second))
     if comp_date<today:
         return False
     else:
@@ -864,3 +869,14 @@ def get_time(seconds):
             period_value, seconds = divmod(seconds, period_seconds)
             result += f'{int(period_value)}{period_name}'
     return result
+
+async def delete_after(messages, delay):
+    """Deletes messages after a certain delay in the background."""
+    await asyncio.sleep(delay)
+    if not isinstance(messages, list):
+        messages = [messages]
+    for msg in messages:
+        try:
+            await msg.delete()
+        except Exception:
+            pass

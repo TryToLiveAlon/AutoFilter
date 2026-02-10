@@ -7,7 +7,7 @@ from pymongo.errors import DuplicateKeyError
 from umongo import Instance, Document, fields
 from motor.motor_asyncio import AsyncIOMotorClient
 from marshmallow.exceptions import ValidationError
-from info import CAPTION_LANGUAGES, DATABASE_URI, DATABASE_URI2, DATABASE_NAME, COLLECTION_NAME, USE_CAPTION_FILTER, MAX_B_TN, MOVIE_UPDATE_CHANNEL, OWNERID
+from info import CAPTION_LANGUAGES, DATABASE_URI, DATABASE_URI2, DATABASE_URI3, DATABASE_NAME, COLLECTION_NAME, USE_CAPTION_FILTER, MAX_B_TN, MOVIE_UPDATE_CHANNEL, OWNERID
 from utils import get_settings, save_group_settings, temp, get_status
 from database.users_chats_db import add_name
 from .Imdbposter import get_movie_details, fetch_image
@@ -18,20 +18,25 @@ logger.setLevel(logging.INFO)
 #---------------------------------------------------------
 # Some basic variables needed
 tempDict = {'indexDB': DATABASE_URI}
+saveMedia = None
 
 # Primary DB
-client = AsyncIOMotorClient(DATABASE_URI)
-db = client[DATABASE_NAME]
-instance = Instance.from_db(db)
-
-#secondary db
-client2 = AsyncIOMotorClient(DATABASE_URI2)
-db2 = client2[DATABASE_NAME]
-instance2 = Instance.from_db(db2)
-
+client = db = instance = Media = None
+if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
+    try:
+        client = AsyncIOMotorClient(DATABASE_URI)
+        db = client[DATABASE_NAME]
+        instance = Instance.from_db(db)
+    except Exception as e:
+        logger.error(f"Error initializing Primary DB client: {e}")
 
 # Primary DB Model
-@instance.register
+def register_primary(cls):
+    if instance is not None:
+        return instance.register(cls)
+    return cls
+
+@register_primary
 class Media(Document):
     file_id = fields.StrField(attribute='_id')
     file_ref = fields.StrField(allow_none=True)
@@ -45,19 +50,71 @@ class Media(Document):
         indexes = ('$file_name', )
         collection_name = COLLECTION_NAME
 
-@instance2.register
-class Media2(Document):
-    file_id = fields.StrField(attribute='_id')
-    file_ref = fields.StrField(allow_none=True)
-    file_name = fields.StrField(required=True)
-    file_size = fields.IntField(required=True)
-    file_type = fields.StrField(allow_none=True)
-    mime_type = fields.StrField(allow_none=True)
-    caption = fields.StrField(allow_none=True)
+MediaModels = []
+if instance is not None:
+    MediaModels.append(Media)
 
-    class Meta:
-        indexes = ('$file_name', )
-        collection_name = COLLECTION_NAME
+#secondary db
+client2 = db2 = instance2 = Media2 = None
+if DATABASE_URI2 and DATABASE_URI2.startswith('mongodb'):
+    try:
+        client2 = AsyncIOMotorClient(DATABASE_URI2)
+        db2 = client2[DATABASE_NAME]
+        instance2 = Instance.from_db(db2) if db2 is not None else None
+
+        def register_secondary(cls):
+            if instance2 is not None:
+                return instance2.register(cls)
+            return cls
+
+        @register_secondary
+        class Media2(Document):
+            file_id = fields.StrField(attribute='_id')
+            file_ref = fields.StrField(allow_none=True)
+            file_name = fields.StrField(required=True)
+            file_size = fields.IntField(required=True)
+            file_type = fields.StrField(allow_none=True)
+            mime_type = fields.StrField(allow_none=True)
+            caption = fields.StrField(allow_none=True)
+
+            class Meta:
+                indexes = ('$file_name', )
+                collection_name = COLLECTION_NAME
+        if Media2 is not None:
+            MediaModels.insert(0, Media2)
+    except Exception as e:
+        logger.error(f"Error initializing DATABASE_URI2: {e}")
+
+#third db
+client3 = db3 = instance3 = Media3 = None
+if DATABASE_URI3 and DATABASE_URI3.startswith('mongodb'):
+    try:
+        client3 = AsyncIOMotorClient(DATABASE_URI3)
+        db3 = client3[DATABASE_NAME]
+        instance3 = Instance.from_db(db3) if db3 is not None else None
+
+        def register_tertiary(cls):
+            if instance3 is not None:
+                return instance3.register(cls)
+            return cls
+
+        @register_tertiary
+        class Media3(Document):
+            file_id = fields.StrField(attribute='_id')
+            file_ref = fields.StrField(allow_none=True)
+            file_name = fields.StrField(required=True)
+            file_size = fields.IntField(required=True)
+            file_type = fields.StrField(allow_none=True)
+            mime_type = fields.StrField(allow_none=True)
+            caption = fields.StrField(allow_none=True)
+
+            class Meta:
+                indexes = ('$file_name', )
+                collection_name = COLLECTION_NAME
+        if Media3 is not None:
+            MediaModels.insert(0, Media3)
+    except Exception as e:
+        logger.error(f"Error initializing DATABASE_URI3: {e}")
 
 async def choose_mediaDB():
     """This Function chooses which database to use based on the value of indexDB key in the dict tempDict."""
@@ -65,20 +122,32 @@ async def choose_mediaDB():
     if tempDict['indexDB'] == DATABASE_URI:
         logger.info("Using first db (Media)")
         saveMedia = Media
-    else:
+    elif DATABASE_URI2 and tempDict['indexDB'] == DATABASE_URI2 and Media2:
         logger.info("Using second db (Media2)")
         saveMedia = Media2
+    elif DATABASE_URI3 and tempDict['indexDB'] == DATABASE_URI3 and Media3:
+        logger.info("Using third db (Media3)")
+        saveMedia = Media3
+    else:
+        logger.info("Using fallback first db (Media)")
+        saveMedia = Media
 
 async def save_file(bot, media):
   """Save file in database"""
   global saveMedia
+  if saveMedia is None:
+      logger.error("No database available to save file!")
+      return False, 0
   file_id, file_ref = unpack_new_file_id(media.file_id)
   file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name))
   try:
-    if saveMedia == Media2: 
-        if await Media.count_documents({'file_id': file_id}, limit=1):
-            logger.warning(f'{file_name} is already saved in primary database!')
+    for model in MediaModels:
+        if model == saveMedia:
+            continue
+        if await model.count_documents({'file_id': file_id}, limit=1):
+            logger.warning(f'{file_name} is already saved in another database!')
             return False, 0
+
     file = saveMedia(
         file_id=file_id,
         file_ref=file_ref,
@@ -140,32 +209,38 @@ async def get_search_results(chat_id, query, file_type=None, max_results=10, off
     if file_type:
         filter['file_type'] = file_type
 
-    total_results = ((await Media.count_documents(filter))+(await Media2.count_documents(filter)))
+    total_results = 0
+    for model in MediaModels:
+        total_results += await model.count_documents(filter)
 
     #verifies max_results is an even number or not
     if max_results%2 != 0: 
         logger.info(f"Since max_results is an odd number ({max_results}), bot will use {max_results+1} as max_results to make it even.")
         max_results += 1
 
-    cursor = Media.find(filter)
-    cursor2 = Media2.find(filter)
+    files = []
+    accumulated_count = 0
+    for model in MediaModels:
+        if len(files) >= max_results:
+            break
 
-    cursor.sort('$natural', -1)
-    cursor2.sort('$natural', -1)
+        count = await model.count_documents(filter)
+        if offset >= accumulated_count + count:
+            accumulated_count += count
+            continue
 
-    cursor2.skip(offset).limit(max_results)
+        local_offset = max(0, offset - accumulated_count)
+        needed = max_results - len(files)
 
-    fileList2 = await cursor2.to_list(length=max_results)
-    if len(fileList2)<max_results:
-        next_offset = offset+len(fileList2)
-        cursorSkipper = (next_offset-(await Media2.count_documents(filter)))
-        cursor.skip(cursorSkipper if cursorSkipper>=0 else 0).limit(max_results-len(fileList2))
-        fileList1 = await cursor.to_list(length=(max_results-len(fileList2)))
-        files = fileList2+fileList1
-        next_offset = next_offset + len(fileList1)
-    else:
-        files = fileList2
-        next_offset = offset + max_results
+        cursor = model.find(filter)
+        cursor.sort('$natural', -1)
+        cursor.skip(local_offset).limit(needed)
+
+        batch = await cursor.to_list(length=needed)
+        files.extend(batch)
+        accumulated_count += count
+
+    next_offset = offset + len(files)
     if next_offset >= total_results:
         next_offset = ''
     return files, next_offset, total_results
@@ -194,13 +269,11 @@ async def get_bad_files(query, file_type=None, filter=False):
     if file_type:
         filter['file_type'] = file_type
 
-    cursor = Media.find(filter)
-    cursor2 = Media2.find(filter)
-
-    cursor.sort('$natural', -1)
-    cursor2.sort('$natural', -1)
-
-    files = ((await cursor2.to_list(length=(await Media2.count_documents(filter))))+(await cursor.to_list(length=(await Media.count_documents(filter)))))
+    files = []
+    for model in MediaModels:
+        cursor = model.find(filter)
+        cursor.sort('$natural', -1)
+        files.extend(await cursor.to_list(length=await model.count_documents(filter)))
 
     total_results = len(files)
 
@@ -208,12 +281,12 @@ async def get_bad_files(query, file_type=None, filter=False):
 
 async def get_file_details(query):
     filter = {'file_id': query}
-    cursor = Media.find(filter)
-    filedetails = await cursor.to_list(length=1)
-    if not filedetails:
-        cursor2 = Media2.find(filter)
-        filedetails = await cursor2.to_list(length=1)
-    return filedetails
+    for model in MediaModels:
+        cursor = model.find(filter)
+        filedetails = await cursor.to_list(length=1)
+        if filedetails:
+            return filedetails
+    return []
 
 
 def encode_file_id(s: bytes) -> str:

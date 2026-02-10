@@ -4,10 +4,10 @@ from datetime import datetime
 
 class Database:
     def __init__(self, uri, db_name):
-        self.client = AsyncIOMotorClient(uri)
-        self.db = self.client[db_name]
-        self.col = self.db.user
-        self.config_col = self.db.configuration
+        self.client = AsyncIOMotorClient(uri) if uri and uri.startswith('mongodb') else None
+        self.db = self.client[db_name] if self.client is not None else None
+        self.col = self.db.user if self.db is not None else None
+        self.config_col = self.db.configuration if self.db is not None else None
 
     async def update_top_messages(self, user_id, message_text):
         user = await self.col.find_one({"user_id": user_id, "messages.text": message_text})
@@ -127,4 +127,9 @@ class Database:
         return configuration.get(key, False)
 
 
-mdb = Database(DATABASE_URI, "admin_database")
+mdb = None
+if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
+    try:
+        mdb = Database(DATABASE_URI, "admin_database")
+    except Exception as e:
+        print(f"Error initializing mdb in config_db: {e}")

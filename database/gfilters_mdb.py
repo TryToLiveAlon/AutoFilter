@@ -5,8 +5,15 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
-myclient = pymongo.MongoClient(DATABASE_URI)
-mydb = myclient[DATABASE_NAME]
+myclient = None
+mydb = None
+
+if DATABASE_URI and DATABASE_URI.startswith('mongodb'):
+    try:
+        myclient = pymongo.MongoClient(DATABASE_URI)
+        mydb = myclient[DATABASE_NAME]
+    except Exception as e:
+        logger.error(f"Error initializing MongoClient in gfilters_mdb: {e}")
 
 
 
