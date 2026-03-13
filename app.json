@@ -1,6 +1,6 @@
 {
     "name": "Death auto Filter",
-    "description": "When you going to send file on telegram channel this bot will save that in database, So you can search that easily in inline mode",
+    "description": "When you going to send file on telegram channel this bot will save that in database, So you can search that easily",
     "stack": "container",
     "keywords": [
       "telegram",
@@ -12,8 +12,7 @@
       "media",
       "search",
       "channel",
-      "index",
-      "inline"
+      "index"
     ],
     "website": "https://github.com/codeflix-bots/autofilter",
     "repository": "/codeflix-bots/autofilter",
@@ -47,7 +46,7 @@
             "required": true
         },
         "AUTH_USERS": {
-            "description": "Username or ID of users to give access of inline search. Separate multiple users by space.\nLeave it empty if you don't want to restrict bot usage.",
+            "description": "Username or ID of users to give access of bot search. Separate multiple users by space.\nLeave it empty if you don't want to restrict bot usage.",
             "required": false
         },
         "AUTH_CHANNEL": {
