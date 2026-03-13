@@ -1,4 +1,5 @@
 import asyncio
+import aiohttp
 import re
 import ast
 import math
@@ -39,7 +40,6 @@ from database.config_db import mdb
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
-import requests
 import string
 import tracemalloc
 
@@ -62,21 +62,18 @@ def generate_random_alphanumeric():
     random_chars = ''.join(random.choice(characters) for _ in range(8))
     return random_chars
   
-def get_shortlink_sync(url):
-    try:
-        rget = requests.get(f"https://{STREAM_SITE}/api?api={STREAM_API}&url={url}&alias={generate_random_alphanumeric()}")
-        rjson = rget.json()
-        if rjson["status"] == "success" or rget.status_code == 200:
-            return rjson["shortenedUrl"]
-        else:
-            return url
-    except Exception as e:
-        print(f"Error in get_shortlink_sync: {e}")
-        return url
-
 async def get_shortlink(url):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, get_shortlink_sync, url)
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={url}&alias={generate_random_alphanumeric()}") as response:
+                rjson = await response.json()
+                if rjson.get("status") == "success" or response.status == 200:
+                    return rjson.get("shortenedUrl")
+                else:
+                    return url
+    except Exception as e:
+        print(f"Error in get_shortlink: {e}")
+        return url
 
 @Client.on_message(filters.group & filters.text & filters.incoming)
 async def give_filter(client, message):
@@ -2552,7 +2549,7 @@ async def auto_filter(client, msg, spoll=False):
     if not spoll:
         message = msg
         if message.text.startswith("/"): return  # ignore commands
-        if re.findall("((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
+        if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
             return
         if len(message.text) < 100:
             search = message.text         
@@ -2578,7 +2575,7 @@ async def auto_filter(client, msg, spoll=False):
                     ai_sts = await m.edit('ᴘʟᴇᴀꜱᴇ ᴡᴀɪᴛ, ʟᴜᴄʏ ɪꜱ ᴄʜᴇᴄᴋɪɴɢ ʏᴏᴜʀ ꜱᴘᴇʟʟɪɴɢ...')
                     is_misspelled = await ai_spell_check(chat_id = message.chat.id,wrong_name=search)
                     if is_misspelled:
-                        await ai_sts.edit(f'<b>✅ʟᴜᴄʏ sᴜɢɢᴇsᴛᴇᴅ <code> {is_misspelled}</code> \nsᴏ ɪᴍ sᴇᴀʀᴄʜɪɴɢ ғᴏᴛ <code>{is_misspelled}</code></b>')
+                        await ai_sts.edit(f'<b>✅ʟᴜᴄʏ sᴜɢɢᴇsᴛᴇᴅ <code> {is_misspelled}</code> \nsᴏ ɪᴍ sᴇᴀʀᴄʜɪɴɢ ғᴏʀ <code>{is_misspelled}</code></b>')
                         await asyncio.sleep(2)
                         message.text = is_misspelled
                         await ai_sts.delete()
@@ -2901,7 +2898,7 @@ async def manual_filters(client, message, text=False):
                                     await auto_filter(client, message)
 
                         else:
-                            button = eval(btn)
+                            button = ast.literal_eval(btn)
                             joelkb = await client.send_message(
                                 group_id,
                                 reply_text,
@@ -2981,7 +2978,7 @@ async def manual_filters(client, message, text=False):
                                 await auto_filter(client, message)
 
                     else:
-                        button = eval(btn)
+                        button = ast.literal_eval(btn)
                         joelkb = await message.reply_cached_media(
                             fileid,
                             caption=reply_text or "",
@@ -3094,7 +3091,7 @@ async def global_filters(client, message, text=False):
                                         await joelkb.delete()
                             
                         else:
-                            button = eval(btn)
+                            button = ast.literal_eval(btn)
                             joelkb = await client.send_message(
                                 group_id,
                                 reply_text,
@@ -3198,7 +3195,7 @@ async def global_filters(client, message, text=False):
                                     await joelkb.delete()
 
                     else:
-                        button = eval(btn)
+                        button = ast.literal_eval(btn)
                         joelkb = await message.reply_cached_media(
                             fileid,
                             caption=reply_text or "",
