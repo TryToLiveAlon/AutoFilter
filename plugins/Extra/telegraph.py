@@ -1,5 +1,5 @@
 import os
-import requests
+import aiohttp
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
@@ -15,13 +15,16 @@ async def c_upload(client, message: Message):
         downloaded_media = await reply.download()
         if not downloaded_media:
             return await msg.edit_text("Something went wrong during download.")
-        with open(downloaded_media, "rb") as f:
-            data = f.read()
-            resp = requests.post("https://envs.sh", files={"file": data})
-            if resp.status_code == 200:
-                await msg.edit_text(f"{resp.text}")
-            else:
-                await msg.edit_text("Something went wrong. Please try again later.")
+        async with aiohttp.ClientSession() as session:
+            with open(downloaded_media, "rb") as f:
+                form_data = aiohttp.FormData()
+                form_data.add_field('file', f)
+                async with session.post("https://envs.sh", data=form_data) as resp:
+                    if resp.status == 200:
+                        res_text = await resp.text()
+                        await msg.edit_text(f"{res_text}")
+                    else:
+                        await msg.edit_text("Something went wrong. Please try again later.")
         os.remove(downloaded_media)
     except Exception as e:
         await msg.edit_text(f"Error: {str(e)}")

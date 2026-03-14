@@ -198,7 +198,7 @@ async def get_search_results(chat_id, query, file_type=None, max_results=10, off
     
     try:
         regex = re.compile(raw_pattern, flags=re.IGNORECASE)
-    except:
+    except Exception:
         return []
 
     if USE_CAPTION_FILTER:
@@ -258,7 +258,7 @@ async def get_bad_files(query, file_type=None, filter=False):
     
     try:
         regex = re.compile(raw_pattern, flags=re.IGNORECASE)
-    except:
+    except Exception:
         return []
 
     if USE_CAPTION_FILTER:
@@ -373,7 +373,7 @@ async def send_msg(bot, filename, caption):
             else:              
                 await bot.send_message(chat_id=MOVIE_UPDATE_CHANNEL, text=text, reply_markup=InlineKeyboardMarkup(btn))
 
-    except:
+    except Exception:
         pass
 
 async def get_qualities(text, qualities: list):

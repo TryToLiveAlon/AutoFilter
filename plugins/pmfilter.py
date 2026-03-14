@@ -39,7 +39,7 @@ from database.config_db import mdb
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
-import requests
+import aiohttp
 import string
 import tracemalloc
 
@@ -62,21 +62,18 @@ def generate_random_alphanumeric():
     random_chars = ''.join(random.choice(characters) for _ in range(8))
     return random_chars
   
-def get_shortlink_sync(url):
-    try:
-        rget = requests.get(f"https://{STREAM_SITE}/api?api={STREAM_API}&url={url}&alias={generate_random_alphanumeric()}")
-        rjson = rget.json()
-        if rjson["status"] == "success" or rget.status_code == 200:
-            return rjson["shortenedUrl"]
-        else:
-            return url
-    except Exception as e:
-        print(f"Error in get_shortlink_sync: {e}")
-        return url
-
 async def get_shortlink(url):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, get_shortlink_sync, url)
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://{STREAM_SITE}/api", params={"api": STREAM_API, "url": url, "alias": generate_random_alphanumeric()}) as response:
+                if response.status == 200:
+                    rjson = await response.json()
+                    if rjson.get("status") == "success":
+                        return rjson.get("shortenedUrl")
+        return url
+    except Exception as e:
+        print(f"Error in get_shortlink: {e}")
+        return url
 
 @Client.on_message(filters.group & filters.text & filters.incoming)
 async def give_filter(client, message):
@@ -162,7 +159,7 @@ async def next_page(bot, query):
         return await query.answer(script.ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     try:
         offset = int(offset)
-    except:
+    except Exception:
         offset = 0
     if BUTTONS.get(key)!=None:
         search = BUTTONS.get(key)
@@ -175,7 +172,7 @@ async def next_page(bot, query):
     files, n_offset, total = await get_search_results(query.message.chat.id, search, offset=offset, filter=True)
     try:
         n_offset = int(n_offset)
-    except:
+    except Exception:
         n_offset = 0
 
     if not files:
@@ -372,7 +369,7 @@ async def qualities_cb_handler(client: Client, query: CallbackQuery):
                 f"⚠️ ʜᴇʟʟᴏ {query.from_user.first_name},\nᴛʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀ'ꜱ...",
                 show_alert=True,
             )
-    except:
+    except Exception:
         pass
     _, key = query.data.split("#")
     # if BUTTONS.get(key+"1")!=None:
@@ -430,7 +427,7 @@ async def filter_qualities_cb_handler(client: Client, query: CallbackQuery):
                 f"⚠️ ʜᴇʟʟᴏ {query.from_user.first_name},\nᴛʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀ'ꜱ...",
                 show_alert=True,
             )
-    except:
+    except Exception:
         pass
     if qual != "homepage":
         search = f"{search} {qual}" 
@@ -539,7 +536,7 @@ async def languages_cb_handler(client: Client, query: CallbackQuery):
                 f"⚠️ ʜᴇʟʟᴏ {query.from_user.first_name},\nᴛʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀ'ꜱ...",
                 show_alert=True,
             )
-    except:
+    except Exception:
         pass
     _, key = query.data.split("#")
     # if BUTTONS.get(key+"1")!=None:
@@ -597,7 +594,7 @@ async def filter_languages_cb_handler(client: Client, query: CallbackQuery):
                 f"⚠️ ʜᴇʟʟᴏ {query.from_user.first_name},\nᴛʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀ'ꜱ...",
                 show_alert=True,
             )
-    except:
+    except Exception:
         pass
     if lang != "homepage":
         search = f"{search} {lang}" 
@@ -706,7 +703,7 @@ async def seasons_cb_handler(client: Client, query: CallbackQuery):
                 f"⚠️ ʜᴇʟʟᴏ {query.from_user.first_name},\nᴛʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀ'ꜱ...",
                 show_alert=True,
             )
-    except:
+    except Exception:
         pass
     _, key = query.data.split("#")
     # if BUTTONS.get(key+"2")!=None:
@@ -771,7 +768,7 @@ async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
                 f"⚠️ ʜᴇʟʟᴏ {query.from_user.first_name},\nᴛʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀ'ꜱ...",
                 show_alert=True,
             )
-    except:
+    except Exception:
         pass
     
     searchagn = search
@@ -872,7 +869,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
     lazyData = query.data
     try:
         link = await client.create_chat_invite_link(int(REQST_CHANNEL))
-    except:
+    except Exception:
         pass
     if query.data == "close_data":
         await query.message.delete()
@@ -896,7 +893,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 try:
                     chat = await client.get_chat(grpid)
                     title = chat.title
-                except:
+                except Exception:
                     await query.message.edit_text("Mᴀᴋᴇ sᴜʀᴇ I'ᴍ ᴘʀᴇsᴇɴᴛ ɪɴ ʏᴏᴜʀ ɢʀᴏᴜᴘ!!", quote=True)
                     return await query.answer(MSG_ALRT)
             else:
@@ -933,7 +930,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 await query.message.delete()
                 try:
                     await query.message.reply_to_message.delete()
-                except:
+                except Exception:
                     pass
             else:
                 await query.answer("Tʜᴀᴛ's ɴᴏᴛ ғᴏʀ ʏᴏᴜ!!", show_alert=True)
@@ -1053,7 +1050,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                         )
                     ]
                 )
-            except:
+            except Exception:
                 pass
         if buttons:
             await query.message.edit_text(
@@ -1087,7 +1084,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         clicked = query.from_user.id
         try:
             typed = query.from_user.id
-        except:
+        except Exception:
             typed = query.from_user.id
         ident, file_id = query.data.split("#")
         files_ = await get_file_details(file_id)
@@ -2921,7 +2918,7 @@ async def manual_filters(client, message, text=False):
                                     await auto_filter(client, message)
 
                         else:
-                            button = eval(btn)
+                            button = ast.literal_eval(btn)
                             joelkb = await client.send_message(
                                 group_id,
                                 reply_text,
@@ -2983,7 +2980,7 @@ async def manual_filters(client, message, text=False):
                                 await auto_filter(client, message)
 
                     else:
-                        button = eval(btn)
+                        button = ast.literal_eval(btn)
                         joelkb = await message.reply_cached_media(
                             fileid,
                             caption=reply_text or "",
@@ -3078,7 +3075,7 @@ async def global_filters(client, message, text=False):
                                         await joelkb.delete()
                             
                         else:
-                            button = eval(btn)
+                            button = ast.literal_eval(btn)
                             joelkb = await client.send_message(
                                 group_id,
                                 reply_text,
@@ -3164,7 +3161,7 @@ async def global_filters(client, message, text=False):
                                     await joelkb.delete()
 
                     else:
-                        button = eval(btn)
+                        button = ast.literal_eval(btn)
                         joelkb = await message.reply_cached_media(
                             fileid,
                             caption=reply_text or "",

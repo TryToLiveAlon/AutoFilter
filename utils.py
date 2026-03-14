@@ -18,7 +18,6 @@ import string
 from typing import List
 from database.users_chats_db import db
 from bs4 import BeautifulSoup
-import requests
 import aiohttp
 from shortzy import Shortzy
 import http.client
@@ -92,7 +91,7 @@ async def is_check_admin(bot, chat_id, user_id):
     try:
         member = await bot.get_chat_member(chat_id, user_id)
         return member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
-    except:
+    except Exception:
         return False
     
 async def get_status(bot_id):
@@ -121,7 +120,7 @@ async def get_poster(query, bulk=False, id=False, file=None):
         def search_imdb(t):
             try:
                 return imdb.search_movie(t, results=10)
-            except:
+            except Exception:
                 return []
 
         movieid = await asyncio.to_thread(search_imdb, title.lower())
@@ -145,7 +144,7 @@ async def get_poster(query, bulk=False, id=False, file=None):
     def get_imdb_movie(mid):
         try:
             return imdb.get_movie(mid)
-        except:
+        except Exception:
             return None
 
     movie = await asyncio.to_thread(get_imdb_movie, movieid)
@@ -203,7 +202,7 @@ async def broadcast_messages(user_id, message):
         m = await message.copy(chat_id=user_id)
         try:
             await m.pin(both_sides=True)
-        except:
+        except Exception:
             pass
         return True, "Success"
     except FloodWait as e:
@@ -228,7 +227,7 @@ async def broadcast_messages_group(chat_id, message):
         kd = await message.copy(chat_id=chat_id)
         try:
             await kd.pin()
-        except:
+        except Exception:
             pass
         return True, "Success"
     except FloodWait as e:
@@ -244,11 +243,17 @@ async def search_gagala(text):
         }
     text = text.replace(" ", '+')
     url = f'https://www.google.com/search?q={text}'
-    response = requests.get(url, headers=usr_agent)
-    response.raise_for_status()
-    soup = BeautifulSoup(response.text, 'html.parser')
-    titles = soup.find_all( 'h3' )
-    return [title.getText() for title in titles]
+    try:
+        async with aiohttp.ClientSession(headers=usr_agent) as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                response_text = await response.text()
+                soup = BeautifulSoup(response_text, 'html.parser')
+                titles = soup.find_all('h3')
+                return [title.getText() for title in titles]
+    except Exception as e:
+        logger.error(f"Error in search_gagala: {e}")
+        return []
 
 async def get_settings(group_id):
     settings = temp.SETTINGS.get(group_id)
@@ -424,7 +429,7 @@ def gfilterparser(text, keyword):
 
     try:
         return note_data, buttons, alerts
-    except:
+    except Exception:
         return note_data, buttons, None
 
 def parser(text, keyword):
@@ -480,7 +485,7 @@ def parser(text, keyword):
 
     try:
         return note_data, buttons, alerts
-    except:
+    except Exception:
         return note_data, buttons, None
 
 def remove_escapes(text: str) -> str:
@@ -838,7 +843,7 @@ async def get_cap(settings, remaining_seconds, files, query, total_results, sear
                 for file in files:
                     cap += f"<b><a href='https://telegram.me/{temp.U_NAME}?start=files_{file.file_id}'>📁 {get_size(file.file_size)} ▷ {' '.join(filter(lambda x: not x.startswith('[') and not x.startswith('@') and not x.startswith('www.'), file.file_name.split()))}\n\n</a></b>"
             else:
-                cap = f"<b>🧿 ᴛɪᴛʟᴇ : <code>{search}</code>\n📂 ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ : <code>{total_results}</code>\n📝 ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ : {message.from_user.mention}\n⏰ ʀᴇsᴜʟᴛ ɪɴ : <code>{remaining_seconds} Sᴇᴄᴏɴᴅs</code>\n⚜️ ᴘᴏᴡᴇʀᴇᴅ ʙʏ : 👇\n⚡ {message.chat.title}\n</b>"
+                cap = f"<b>🧿 ᴛɪᴛʟᴇ : <code>{search}</code>\n📂 ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ : <code>{total_results}</code>\n📝 ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ : {query.from_user.mention}\n⏰ ʀᴇsᴜʟᴛ ɪɴ : <code>{remaining_seconds} Sᴇᴄᴏɴᴅs</code>\n⚜️ ᴘᴏᴡᴇʀᴇᴅ ʙʏ : 👇\n⚡ {query.message.chat.title}\n</b>"
                 cap+="\n\n<b>📚 <u>Your Requested Files</u> 👇\n\n</b>"
                 for file in files:
                     cap += f"<b><a href='https://telegram.me/{temp.U_NAME}?start=files_{file.file_id}'>📁 {get_size(file.file_size)} ▷ {' '.join(filter(lambda x: not x.startswith('[') and not x.startswith('@') and not x.startswith('www.'), file.file_name.split()))}\n\n</a></b>"
