@@ -3244,7 +3244,13 @@ async def global_filters(client, message, text=False):
 @Client.on_callback_query(filters.regex(r"^autofilter#"))
 async def autofilter_cb_handler(client: Client, query: CallbackQuery):
     _, movie = query.data.split("#")
-    query.message.text = movie
-    query.message.from_user = query.from_user
-    await auto_filter(client, query.message)
+    if query.message.reply_to_message:
+        # Use the original user message to trigger auto_filter
+        # This keeps the user context correct (Requested by: user)
+        query.message.reply_to_message.text = movie
+        await auto_filter(client, query.message.reply_to_message)
+    else:
+        query.message.text = movie
+        query.message.from_user = query.from_user
+        await auto_filter(client, query.message)
     await query.answer()
