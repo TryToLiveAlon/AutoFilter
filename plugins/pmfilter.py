@@ -317,12 +317,20 @@ async def next_page(bot, query):
 
 @Client.on_callback_query(filters.regex(r"^spol"))
 async def advantage_spoll_choker(bot, query):
-    _, id, user = query.data.split('#')
+    data = query.data.split('#', 3)
+    if data[1] == 'db':
+        _, _, user, movie = data
+    else:
+        _, id, user = data
+        movies = await get_poster(id, id=True)
+        movie = movies.get('title') if movies else None
+
     if int(user) != 0 and query.from_user.id != int(user):
         return await query.answer(script.ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     
-    movies = await get_poster(id, id=True)
-    movie = movies.get('title')
+    if not movie:
+        return await query.answer("Movie info not found!", show_alert=True)
+
     movie = re.sub(r"[:-]", " ", movie)
     movie = re.sub(r"\s+", " ", movie).strip()
     
@@ -2850,7 +2858,7 @@ async def advantage_spell_chok(client, message):
         if sug['from_db']:
              # Use a different callback for DB items to just trigger a search
              buttons.append([
-                InlineKeyboardButton(text=btn_text, switch_inline_query_current_chat=title)
+                InlineKeyboardButton(text=btn_text, callback_data=f"spol#db#{user}#{title}")
             ])
         else:
             buttons.append([
