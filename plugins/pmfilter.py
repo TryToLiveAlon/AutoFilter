@@ -2541,6 +2541,60 @@ async def cb_handler(client: Client, query: CallbackQuery):
     await query.answer(MSG_ALRT)
 
     
+async def get_suggestions(query):
+    query = re.sub(r'[^a-zA-Z0-9 ]', ' ', query).strip()
+    if not query:
+        return []
+
+    # 1. Get trending searches
+    top_messages = await mdb.get_top_messages(limit=100)
+
+    # 2. Search database for titles containing keywords
+    keywords = query.split()
+    db_query = {"file_name": {"$regex": "|".join(keywords), "$options": "i"}}
+    db_results = []
+    try:
+        # Use a subset of results for performance
+        cursor = Media.find(db_query).limit(50)
+        async for doc in cursor:
+            db_results.append(doc.file_name)
+        cursor2 = Media2.find(db_query).limit(50)
+        async for doc in cursor2:
+            db_results.append(doc.file_name)
+    except:
+        pass
+
+    # 3. IMDb Search Fallback
+    imdb_results = []
+    try:
+        search_results = imdb.search_movie(query)
+        imdb_results = [m['title'] for m in search_results[:10]]
+    except:
+        pass
+
+    # Combine all sources
+    all_candidates = list(set(top_messages + db_results + imdb_results))
+
+    if not all_candidates:
+        return []
+
+    # Fuzzy matching to find best matches
+    matches = process.extract(query, all_candidates, limit=10)
+
+    # Filter for uniqueness and relevance
+    unique_suggestions = []
+    for match in matches:
+        name, score = match[0], match[1]
+        if score > 50:
+            # Clean name (remove extra junk)
+            clean_name = re.sub(r'\(.*?\)|\[.*?\]', '', name).strip()
+            if clean_name.lower() not in [s.lower() for s in unique_suggestions] and clean_name:
+                unique_suggestions.append(clean_name)
+        if len(unique_suggestions) >= 5:
+            break
+
+    return unique_suggestions
+
 async def auto_filter(client, msg, spoll=False):
     curr_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
     # reqstr1 = msg.from_user.id if msg.from_user else 0
@@ -2570,18 +2624,19 @@ async def auto_filter(client, msg, spoll=False):
             files, offset, total_results = await get_search_results(message.chat.id ,search, offset=0, filter=True)
             settings = await get_settings(message.chat.id)
             if not files:
-                #await m.delete()
                 if settings["spell_check"]:
-                    ai_sts = await m.edit('ᴘʟᴇᴀꜱᴇ ᴡᴀɪᴛ, ʟᴜᴄʏ ɪꜱ ᴄʜᴇᴄᴋɪɴɢ ʏᴏᴜʀ ꜱᴘᴇʟʟɪɴɢ...')
-                    is_misspelled = await ai_spell_check(chat_id = message.chat.id,wrong_name=search)
-                    if is_misspelled:
-                        await ai_sts.edit(f'<b>✅ʟᴜᴄʏ sᴜɢɢᴇsᴛᴇᴅ <code> {is_misspelled}</code> \nsᴏ ɪᴍ sᴇᴀʀᴄʜɪɴɢ ғᴏʀ <code>{is_misspelled}</code></b>')
-                        await asyncio.sleep(2)
-                        message.text = is_misspelled
-                        await ai_sts.delete()
-                        return await auto_filter(client, message)
-                    await ai_sts.delete()
-                    return await advantage_spell_chok(client, message)
+                    suggestions = await get_suggestions(search)
+                    if suggestions:
+                        btn = [[InlineKeyboardButton(text=s, callback_data=f"autofilter#{s}")] for s in suggestions]
+                        btn.append([InlineKeyboardButton(text="ᴄʟᴏsᴇ", callback_data="close_data")])
+                        await message.reply_text(
+                            text=script.CUDNT_FND.format(message.from_user.mention),
+                            reply_markup=InlineKeyboardMarkup(btn)
+                        )
+                    else:
+                        await message.reply_text(script.I_CUD_NT.format(search))
+                    await m.delete()
+                    return
         else:
             return
     else:
@@ -2772,73 +2827,6 @@ async def auto_filter(client, msg, spoll=False):
             await fuk.delete()
             await message.delete()
 
-async def ai_spell_check(chat_id, wrong_name):
-    async def search_movie(wrong_name):
-        search_results = imdb.search_movie(wrong_name)
-        movie_list = [movie['title'] for movie in search_results]
-        return movie_list
-    movie_list = await search_movie(wrong_name)
-    if not movie_list:
-        return
-    for _ in range(5):
-        closest_match = process.extractOne(wrong_name, movie_list)
-        if not closest_match or closest_match[1] <= 80:
-            return 
-        movie = closest_match[0]
-        files, offset, total_results = await get_search_results(chat_id=chat_id, query=movie)
-        if files:
-            return movie
-        movie_list.remove(movie)
-
-async def advantage_spell_chok(client, message):
-    mv_id = message.id
-    search = message.text
-    chat_id = message.chat.id
-    settings = await get_settings(chat_id)
-    query = re.sub(
-        r"\b(pl(i|e)*?(s|z+|ease|se|ese|(e+)s(e)?)|((send|snd|giv(e)?|gib)(\sme)?)|movie(s)?|new|latest|br((o|u)h?)*|^h(e|a)?(l)*(o)*|mal(ayalam)?|t(h)?amil|file|that|find|und(o)*|kit(t(i|y)?)?o(w)?|thar(u)?(o)*w?|kittum(o)*|aya(k)*(um(o)*)?|full\smovie|any(one)|with\ssubtitle(s)?)",
-        "", message.text, flags=re.IGNORECASE)
-    query = query.strip() + " movie"
-    try:
-        movies = await get_poster(search, bulk=True)
-    except:
-        k = await message.reply(script.I_CUDNT.format(message.from_user.mention))
-        await asyncio.sleep(60)
-        await k.delete()
-        try:
-            await message.delete()
-        except:
-            pass
-        return
-    if not movies:
-        google = search.replace(" ", "+")
-        button = [[
-            InlineKeyboardButton("ᴅᴏ ɢᴏᴏɢʟᴇ", url=f"https://www.google.com/search?q={google}")
-        ]]
-        k = await message.reply_text(text=script.I_CUDNT.format(search), reply_markup=InlineKeyboardMarkup(button))
-        await asyncio.sleep(60)
-        await k.delete()
-        try:
-            await message.delete()
-        except:
-            pass
-        return
-    user = message.from_user.id if message.from_user else 0
-    buttons = [[
-        InlineKeyboardButton(text=movie.get('title'), callback_data=f"spol#{movie.movieID}#{user}")
-    ]
-        for movie in movies
-    ]
-    buttons.append(
-        [InlineKeyboardButton(text="ᴄʟᴏsᴇ", callback_data='close_data')]
-    )
-    d = await message.reply_text(text=script.CUDNT_FND.format(message.from_user.mention), reply_markup=InlineKeyboardMarkup(buttons), reply_to_message_id=message.id)
-    await asyncio.sleep(60)
-    await d.delete()
-    try:
-        await message.delete()
-    except:
-        pass
 
 
 async def manual_filters(client, message, text=False):
@@ -3252,3 +3240,11 @@ async def global_filters(client, message, text=False):
                 break
     else:
         return False
+
+@Client.on_callback_query(filters.regex(r"^autofilter#"))
+async def autofilter_cb_handler(client: Client, query: CallbackQuery):
+    _, movie = query.data.split("#")
+    query.message.text = movie
+    query.message.from_user = query.from_user
+    await auto_filter(client, query.message)
+    await query.answer()
