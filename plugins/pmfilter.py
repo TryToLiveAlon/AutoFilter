@@ -317,11 +317,15 @@ async def next_page(bot, query):
 
 @Client.on_callback_query(filters.regex(r"^spol"))
 async def advantage_spoll_choker(bot, query):
-    data = query.data.split('#', 3)
+    data = query.data.split('#')
     if data[1] == 'db':
+        if len(data) < 4:
+            return await query.answer("Old suggestion, please search again.", show_alert=True)
         _, _, user, key = data
         movie = SPELL_CHECK.get(key)
     else:
+        if len(data) < 3:
+            return await query.answer("Invalid callback data.", show_alert=True)
         _, id, user = data
         movies = await get_poster(id, id=True)
         movie = movies.get('title') if movies else None

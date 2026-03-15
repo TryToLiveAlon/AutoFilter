@@ -570,56 +570,50 @@ async def get_verify_shorted_link(link):
     API = SHORTLINK_API
     URL = SHORTLINK_URL
 
-    # Ensure URL is encoded for the API call
-    # Note: aiohttp handles parameter encoding automatically if passed as a dict
-
-    if URL == "api.shareus.in":
-        url = f"https://{URL}/shortLink"
-        params = {
-            "token": API,
-            "format": "json",
-            "link": link,
-        }
+    for i in range(3):
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
-                    data = await response.json(content_type="text/html")
-                    if data.get("status") == "success":
-                        return data["shortlink"]
-                    else:
-                        logger.error(f"Shareus Error: {data.get('message', 'Unknown error')}")
+                if URL == "api.shareus.in":
+                    url = f"https://{URL}/shortLink"
+                    params = {"token": API, "format": "json", "link": link}
+                    async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
+                        try:
+                            data = await response.json(content_type="text/html")
+                        except Exception:
+                            data = await response.json()
+                        if data.get("status") == "success":
+                            return data["shortlink"]
+                        logger.error(f"Shareus Error (Attempt {i+1}): {data.get('message', 'Unknown error')}")
+                else:
+                    url = f'https://{URL}/api'
+                    for p_name in ['url', 'link']:
+                        params = {'api': API, p_name: link}
+                        async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
+                            try:
+                                data = await response.json()
+                                if data.get("status") == "success":
+                                    return data.get('shortenedUrl') or data.get('link') or data.get('url') or data.get('shortlink')
+                            except Exception:
+                                res_text = await response.text()
+                                if res_text.startswith("http"):
+                                    return res_text
         except Exception as e:
-            logger.error(f"Shareus Exception: {e}")
+            logger.error(f"Shortener Attempt {i+1} failed: {e}")
+        await asyncio.sleep(2)
 
-    else:
-        url = f'https://{URL}/api'
-        # Some shorteners use 'link', some use 'url'. We try 'url' first as it's common.
-        params = {
-            'api': API,
-            'url': link,
-        }
+    # Fallback to public reliable shorteners to avoid direct links
+    for fallback_url in ["https://tinyurl.com/api-create.php?url={}", "https://is.gd/create.php?format=simple&url={}"]:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
-                    # Generic shorteners usually return JSON
-                    data = await response.json()
-                    if data.get("status") == "success":
-                        return data.get('shortenedUrl')
-                    else:
-                        logger.error(f"Shortener Error: {data.get('message', 'Unknown error')}")
-
-                        # Some shorteners might need 'link' instead of 'url'
-                        params = {'api': API, 'link': link}
-                        async with session.get(url, params=params, raise_for_status=True, ssl=False) as response2:
-                            data2 = await response2.json()
-                            if data2.get("status") == "success":
-                                return data2.get('shortenedUrl')
+                async with session.get(fallback_url.format(link), timeout=5) as response:
+                    if response.status == 200:
+                        shortened = await response.text()
+                        if shortened.startswith("http"):
+                            return shortened
         except Exception as e:
-            logger.error(f"Shortener Exception: {e}")
+            logger.error(f"Fallback shortener {fallback_url} failed: {e}")
 
-    # Fallback: Always return the original link if shortening fails
-    # NEVER return the raw API URL as it exposes the API key and is unusable for the user
-    return link
+    return HOW_TO_VERIFY
 
 async def check_token(bot, userid, token):
     user = await bot.get_users(userid)
