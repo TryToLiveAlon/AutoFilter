@@ -319,7 +319,8 @@ async def next_page(bot, query):
 async def advantage_spoll_choker(bot, query):
     data = query.data.split('#', 3)
     if data[1] == 'db':
-        _, _, user, movie = data
+        _, _, user, key = data
+        movie = SPELL_CHECK.get(key)
     else:
         _, id, user = data
         movies = await get_poster(id, id=True)
@@ -2857,8 +2858,10 @@ async def advantage_spell_chok(client, message):
         btn_text = f"{title}" + (f" ({year})" if year else "")
         if sug['from_db']:
              # Use a different callback for DB items to just trigger a search
+             key = generate_random_alphanumeric()
+             SPELL_CHECK[key] = title
              buttons.append([
-                InlineKeyboardButton(text=btn_text, callback_data=f"spol#db#{user}#{title}")
+                InlineKeyboardButton(text=btn_text, callback_data=f"spol#db#{user}#{key}")
             ])
         else:
             buttons.append([
