@@ -360,20 +360,21 @@ async def start(client, message):
         return await sts.delete()
 
     elif data.split("-", 1)[0] == "verify":
-        userid = data.split("-", 2)[1]
-        token = data.split("-", 3)[2] 
-        fileid = data.split("-", 3)[3]
+        try:
+            _, userid, token, fileid = data.split("-", 3)
+        except ValueError:
+            return await message.reply_text("<b>Invalid Verification Link !</b>")
 
         if str(message.from_user.id) != str(userid):
             return await message.reply_text(
                 text="<b>Invalid link or Expired link !</b>",
                 protect_content=False
             )
-        # Check if premium user - fully exempt
-        if await db.has_premium_access(message.from_user.id):
-            # If they are premium, just complete verification if somehow they clicked it
-            pass
-        else:
+        # Check if premium user or already verified - exempt from bypass detection
+        is_premium = await db.has_premium_access(message.from_user.id)
+        is_verified = await check_verification(client, message.from_user.id)
+
+        if not is_premium and not is_verified:
             # Bypass detection for normal users
             start_time = await db.get_verification_start_time(userid)
             time_taken = time.time() - start_time

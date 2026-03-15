@@ -31,7 +31,6 @@ BTN_URL_REGEX = re.compile(
 )
 
 imdb = Cinemagoer() 
-TOKENS = {}
 VERIFIED = {}
 BANNED = {}
 SECOND_SHORTENER = {}
@@ -620,16 +619,10 @@ async def check_token(bot, userid, token):
     if not await db.is_user_exist(user.id):
         await db.add_user(user.id, user.first_name)
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
-    if user.id in TOKENS.keys():
-        TKN = TOKENS[user.id]
-        if token in TKN.keys():
-            is_used = TKN[token]
-            if is_used == True:
-                return False
-            else:
-                return True
-    else:
-        return False
+
+    # Persistent token check from DB
+    short_link = await db.get_verify_token_link(user.id, token)
+    return bool(short_link)
 
 async def get_token(bot, userid, link, fileid):
     if await db.is_user_temp_banned(userid):
@@ -638,13 +631,16 @@ async def get_token(bot, userid, link, fileid):
     if not await db.is_user_exist(user.id):
         await db.add_user(user.id, user.first_name)
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
+
     token = ''.join(random.choices(string.ascii_letters + string.digits, k=7))
-    TOKENS[user.id] = {token: False}
     # Store start time for bypass detection
     await db.update_verification_start_time(user.id, time.time())
 
-    link = f"{link}verify-{user.id}-{token}-{fileid}"
-    shortened_verify_url = await get_verify_shorted_link(link)
+    full_link = f"{link}verify-{user.id}-{token}-{fileid}"
+    shortened_verify_url = await get_verify_shorted_link(full_link)
+
+    # Save token persistently in DB
+    await db.add_verify_token(user.id, token, shortened_verify_url)
 
     # Return direct shortened link
     return str(shortened_verify_url)
@@ -668,12 +664,14 @@ async def verify_user(bot, userid, token):
     if not await db.is_user_exist(user.id):
         await db.add_user(user.id, user.first_name)
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
-    TOKENS[user.id] = {token: True}
+
+    # We could mark token as used in DB if we want single-use tokens
+    # For now, we update the user's verification expiry status
     tz = pytz.timezone('Asia/Kolkata')
     date_var = datetime.now(tz)+timedelta(hours=VERIFY_EXPIRE)
     temp_time = date_var.strftime("%H:%M:%S")
-    date_var, time_var = str(date_var).split(" ")
-    await update_verify_status(user.id, date_var, temp_time)
+    date_str, time_str = str(date_var).split(" ")
+    await update_verify_status(user.id, date_str, temp_time)
 
 async def check_verification(bot, userid):
     user = await bot.get_users(int(userid))
