@@ -1,18 +1,19 @@
 import logging
 import os
-import requests
+import aiohttp
 from pyrogram import Client, filters
 
 # Existing function for GitHub repository search
 @Client.on_message(filters.command('repo'))
 async def git(Kashmira, message):
     pablo = await message.reply_text("`Processing...`")
-    args = message.text.split(None, 1)[1]
     if len(message.command) == 1:
         await pablo.edit("No input found")
         return
-    r = requests.get("https://api.github.com/search/repositories", params={"q": args})
-    lool = r.json()
+    args = message.text.split(None, 1)[1]
+    async with aiohttp.ClientSession() as session:
+        async with session.get("https://api.github.com/search/repositories", params={"q": args}) as r:
+            lool = await r.json()
     if lool.get("total_count") == 0:
         await pablo.edit("File not found")
         return
@@ -62,13 +63,12 @@ async def github_user(Kashmira, message):
         return
     
     username = message.text.split(None, 1)[1]
-    r = requests.get(f"https://api.github.com/users/{username}")
-    
-    if r.status_code != 200:
-        await pablo.edit(f"GitHub user `{username}` not found.")
-        return
-
-    user_data = r.json()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.github.com/users/{username}") as r:
+            if r.status != 200:
+                await pablo.edit(f"GitHub user `{username}` not found.")
+                return
+            user_data = await r.json()
     
     # Constructing the response text
     txt = f"""

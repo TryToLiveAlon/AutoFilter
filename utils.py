@@ -3,7 +3,7 @@ from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait,
 from info import *
 from imdb import Cinemagoer 
 import asyncio
-from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from pyrogram.errors import FloodWait, UserIsBlocked, MessageNotModified, PeerIdInvalid
 from pyrogram import enums
 from typing import Union
@@ -18,7 +18,6 @@ import string
 from typing import List
 from database.users_chats_db import db
 from bs4 import BeautifulSoup
-import requests
 import aiohttp
 from shortzy import Shortzy
 import http.client
@@ -32,7 +31,6 @@ BTN_URL_REGEX = re.compile(
 )
 
 imdb = Cinemagoer() 
-TOKENS = {}
 VERIFIED = {}
 BANNED = {}
 SECOND_SHORTENER = {}
@@ -92,7 +90,7 @@ async def is_check_admin(bot, chat_id, user_id):
     try:
         member = await bot.get_chat_member(chat_id, user_id)
         return member.status in [enums.ChatMemberStatus.ADMINISTRATOR, enums.ChatMemberStatus.OWNER]
-    except:
+    except Exception:
         return False
     
 async def get_status(bot_id):
@@ -121,7 +119,7 @@ async def get_poster(query, bulk=False, id=False, file=None):
         def search_imdb(t):
             try:
                 return imdb.search_movie(t, results=10)
-            except:
+            except Exception:
                 return []
 
         movieid = await asyncio.to_thread(search_imdb, title.lower())
@@ -145,7 +143,7 @@ async def get_poster(query, bulk=False, id=False, file=None):
     def get_imdb_movie(mid):
         try:
             return imdb.get_movie(mid)
-        except:
+        except Exception:
             return None
 
     movie = await asyncio.to_thread(get_imdb_movie, movieid)
@@ -203,7 +201,7 @@ async def broadcast_messages(user_id, message):
         m = await message.copy(chat_id=user_id)
         try:
             await m.pin(both_sides=True)
-        except:
+        except Exception:
             pass
         return True, "Success"
     except FloodWait as e:
@@ -228,7 +226,7 @@ async def broadcast_messages_group(chat_id, message):
         kd = await message.copy(chat_id=chat_id)
         try:
             await kd.pin()
-        except:
+        except Exception:
             pass
         return True, "Success"
     except FloodWait as e:
@@ -244,11 +242,17 @@ async def search_gagala(text):
         }
     text = text.replace(" ", '+')
     url = f'https://www.google.com/search?q={text}'
-    response = requests.get(url, headers=usr_agent)
-    response.raise_for_status()
-    soup = BeautifulSoup(response.text, 'html.parser')
-    titles = soup.find_all( 'h3' )
-    return [title.getText() for title in titles]
+    try:
+        async with aiohttp.ClientSession(headers=usr_agent) as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                response_text = await response.text()
+                soup = BeautifulSoup(response_text, 'html.parser')
+                titles = soup.find_all('h3')
+                return [title.getText() for title in titles]
+    except Exception as e:
+        logger.error(f"Error in search_gagala: {e}")
+        return []
 
 async def get_settings(group_id):
     settings = temp.SETTINGS.get(group_id)
@@ -424,7 +428,7 @@ def gfilterparser(text, keyword):
 
     try:
         return note_data, buttons, alerts
-    except:
+    except Exception:
         return note_data, buttons, None
 
 def parser(text, keyword):
@@ -480,7 +484,7 @@ def parser(text, keyword):
 
     try:
         return note_data, buttons, alerts
-    except:
+    except Exception:
         return note_data, buttons, None
 
 def remove_escapes(text: str) -> str:
@@ -565,87 +569,74 @@ async def get_verify_shorted_link(link):
     API = SHORTLINK_API
     URL = SHORTLINK_URL
 
-    # Ensure URL is encoded for the API call
-    # Note: aiohttp handles parameter encoding automatically if passed as a dict
-
-    if URL == "api.shareus.in":
-        url = f"https://{URL}/shortLink"
-        params = {
-            "token": API,
-            "format": "json",
-            "link": link,
-        }
+    for i in range(3):
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
-                    data = await response.json(content_type="text/html")
-                    if data.get("status") == "success":
-                        return data["shortlink"]
-                    else:
-                        logger.error(f"Shareus Error: {data.get('message', 'Unknown error')}")
+                if URL == "api.shareus.in":
+                    url = f"https://{URL}/shortLink"
+                    params = {"token": API, "format": "json", "link": link}
+                    async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
+                        try:
+                            data = await response.json(content_type="text/html")
+                        except Exception:
+                            data = await response.json()
+                        if data.get("status") == "success":
+                            return data["shortlink"]
+                        logger.error(f"Shareus Error (Attempt {i+1}): {data.get('message', 'Unknown error')}")
+                else:
+                    url = f'https://{URL}/api'
+                    for p_name in ['url', 'link']:
+                        params = {'api': API, p_name: link}
+                        async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
+                            try:
+                                data = await response.json()
+                                if data.get("status") == "success":
+                                    return data.get('shortenedUrl') or data.get('link') or data.get('url') or data.get('shortlink')
+                            except Exception:
+                                res_text = await response.text()
+                                if res_text.startswith("http"):
+                                    return res_text
         except Exception as e:
-            logger.error(f"Shareus Exception: {e}")
+            logger.error(f"Shortener Attempt {i+1} failed: {e}")
+        await asyncio.sleep(2)
 
-    else:
-        url = f'https://{URL}/api'
-        # Some shorteners use 'link', some use 'url'. We try 'url' first as it's common.
-        params = {
-            'api': API,
-            'url': link,
-        }
+    # Fallback to public reliable shorteners to avoid direct links
+    for fallback_url in ["https://tinyurl.com/api-create.php?url={}", "https://is.gd/create.php?format=simple&url={}"]:
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params, raise_for_status=True, ssl=False) as response:
-                    # Generic shorteners usually return JSON
-                    data = await response.json()
-                    if data.get("status") == "success":
-                        return data.get('shortenedUrl')
-                    else:
-                        logger.error(f"Shortener Error: {data.get('message', 'Unknown error')}")
-
-                        # Some shorteners might need 'link' instead of 'url'
-                        params = {'api': API, 'link': link}
-                        async with session.get(url, params=params, raise_for_status=True, ssl=False) as response2:
-                            data2 = await response2.json()
-                            if data2.get("status") == "success":
-                                return data2.get('shortenedUrl')
+                async with session.get(fallback_url.format(link), timeout=5) as response:
+                    if response.status == 200:
+                        shortened = await response.text()
+                        if shortened.startswith("http"):
+                            return shortened
         except Exception as e:
-            logger.error(f"Shortener Exception: {e}")
+            logger.error(f"Fallback shortener {fallback_url} failed: {e}")
 
-    # Fallback: Always return the original link if shortening fails
-    # NEVER return the raw API URL as it exposes the API key and is unusable for the user
-    return link
+    return HOW_TO_VERIFY
 
 async def check_token(bot, userid, token):
     user = await bot.get_users(userid)
     if not await db.is_user_exist(user.id):
         await db.add_user(user.id, user.first_name)
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
-    if user.id in TOKENS.keys():
-        TKN = TOKENS[user.id]
-        if token in TKN.keys():
-            is_used = TKN[token]
-            if is_used == True:
-                return False
-            else:
-                return True
-    else:
-        return False
+
+    # Persistent token check from DB
+    short_link = await db.get_verify_token_link(user.id, token)
+    return bool(short_link)
 
 async def get_token(bot, userid, link, fileid):
-    if await db.is_user_temp_banned(userid):
-        return f"https://telegram.me/{temp.U_NAME}?start=temp_banned"
     user = await bot.get_users(userid)
     if not await db.is_user_exist(user.id):
         await db.add_user(user.id, user.first_name)
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
-    token = ''.join(random.choices(string.ascii_letters + string.digits, k=7))
-    TOKENS[user.id] = {token: False}
-    # Store start time for bypass detection
-    await db.update_verification_start_time(user.id, time.time())
 
-    link = f"{link}verify-{user.id}-{token}-{fileid}"
-    shortened_verify_url = await get_verify_shorted_link(link)
+    token = ''.join(random.choices(string.ascii_letters + string.digits, k=7))
+
+    full_link = f"{link}verify-{user.id}-{token}-{fileid}"
+    shortened_verify_url = await get_verify_shorted_link(full_link)
+
+    # Save token persistently in DB
+    await db.add_verify_token(user.id, token, shortened_verify_url)
 
     # Return direct shortened link
     return str(shortened_verify_url)
@@ -669,12 +660,14 @@ async def verify_user(bot, userid, token):
     if not await db.is_user_exist(user.id):
         await db.add_user(user.id, user.first_name)
         await bot.send_message(LOG_CHANNEL, script.LOG_TEXT_P.format(user.id, user.mention))
-    TOKENS[user.id] = {token: True}
+
+    # We could mark token as used in DB if we want single-use tokens
+    # For now, we update the user's verification expiry status
     tz = pytz.timezone('Asia/Kolkata')
     date_var = datetime.now(tz)+timedelta(hours=VERIFY_EXPIRE)
     temp_time = date_var.strftime("%H:%M:%S")
-    date_var, time_var = str(date_var).split(" ")
-    await update_verify_status(user.id, date_var, temp_time)
+    date_str, time_str = str(date_var).split(" ")
+    await update_verify_status(user.id, date_str, temp_time)
 
 async def check_verification(bot, userid):
     user = await bot.get_users(int(userid))
@@ -792,6 +785,13 @@ async def send_all(bot, userid, files, ident, chat_id, user_name, query):
         await query.answer('Hᴇʏ, Sᴛᴀʀᴛ Bᴏᴛ Fɪʀsᴛ Aɴᴅ Cʟɪᴄᴋ Sᴇɴᴅ Aʟʟ', show_alert=True)
         
 async def get_cap(settings, remaining_seconds, files, query, total_results, search):
+    if isinstance(query, CallbackQuery):
+        mention = query.from_user.mention
+        chat_title = query.message.chat.title
+    else:
+        mention = query.from_user.mention
+        chat_title = query.chat.title
+
     if settings["imdb"]:
         IMDB_CAP = temp.IMDB_CAP.get(query.from_user.id)
         if IMDB_CAP:
@@ -838,12 +838,12 @@ async def get_cap(settings, remaining_seconds, files, query, total_results, sear
                 for file in files:
                     cap += f"<b><a href='https://telegram.me/{temp.U_NAME}?start=files_{file.file_id}'>📁 {get_size(file.file_size)} ▷ {' '.join(filter(lambda x: not x.startswith('[') and not x.startswith('@') and not x.startswith('www.'), file.file_name.split()))}\n\n</a></b>"
             else:
-                cap = f"<b>🧿 ᴛɪᴛʟᴇ : <code>{search}</code>\n📂 ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ : <code>{total_results}</code>\n📝 ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ : {message.from_user.mention}\n⏰ ʀᴇsᴜʟᴛ ɪɴ : <code>{remaining_seconds} Sᴇᴄᴏɴᴅs</code>\n⚜️ ᴘᴏᴡᴇʀᴇᴅ ʙʏ : 👇\n⚡ {message.chat.title}\n</b>"
+                cap = f"<b>🧿 ᴛɪᴛʟᴇ : <code>{search}</code>\n📂 ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ : <code>{total_results}</code>\n📝 ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ : {mention}\n⏰ ʀᴇsᴜʟᴛ ɪɴ : <code>{remaining_seconds} Sᴇᴄᴏɴᴅs</code>\n⚜️ ᴘᴏᴡᴇʀᴇᴅ ʙʏ : 👇\n⚡ {chat_title}\n</b>"
                 cap+="\n\n<b>📚 <u>Your Requested Files</u> 👇\n\n</b>"
                 for file in files:
                     cap += f"<b><a href='https://telegram.me/{temp.U_NAME}?start=files_{file.file_id}'>📁 {get_size(file.file_size)} ▷ {' '.join(filter(lambda x: not x.startswith('[') and not x.startswith('@') and not x.startswith('www.'), file.file_name.split()))}\n\n</a></b>"
     else:
-        cap = f"<b>🧿 ᴛɪᴛʟᴇ : <code>{search}</code>\n📂 ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ : <code>{total_results}</code>\n📝 ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ : {query.from_user.mention}\n⚜️ ᴘᴏᴡᴇʀᴇᴅ ʙʏ : 👇\n⚡ DEATH_MOVIE\n</b>"
+        cap = f"<b>🧿 ᴛɪᴛʟᴇ : <code>{search}</code>\n📂 ᴛᴏᴛᴀʟ ꜰɪʟᴇꜱ : <code>{total_results}</code>\n📝 ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ : {mention}\n⚜️ ᴘᴏᴡᴇʀᴇᴅ ʙʏ : 👇\n⚡ DEATH_MOVIE\n</b>"
         cap+="\n\n<b>📚 <u>Your Requested Files</u> 👇\n\n</b>"
         for file in files:
             cap += f"<b><a href='https://telegram.me/{temp.U_NAME}?start=files_{file.file_id}'>📁 {get_size(file.file_size)} ▷ {' '.join(filter(lambda x: not x.startswith('[') and not x.startswith('@') and not x.startswith('www.'), file.file_name.split()))}\n\n</a></b>"
