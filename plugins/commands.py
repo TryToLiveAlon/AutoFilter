@@ -31,12 +31,6 @@ BATCH_FILES = {}
 
 @Client.on_message(filters.command("start") & filters.incoming)
 async def start(client, message):
-    if await db.is_user_temp_banned(message.from_user.id):
-        await message.reply_text(
-            "<b>Bypass detected. You are temporarily banned for 60 seconds. If you are caught again, you may be permanently banned.</b>",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Support", url="https://t.me/death_movies")]])
-        )
-        return
     if EMOJI_MODE:    
         await message.react(emoji=random.choice(REACTIONS), big=True) 
     if message.chat.type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
@@ -118,13 +112,7 @@ async def start(client, message):
                 )
                 return
        
-    if len(message.command) == 2 and message.command[1] in ["subscribe", "error", "okay", "help", "verify", "temp_banned"]:
-        if message.command[1] == "temp_banned":
-            await message.reply_text(
-                "<b>Bypass detected. You are temporarily banned for 60 seconds. If you are caught again, you may be permanently banned.</b>",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Support", url="https://t.me/death_movies")]])
-            )
-            return
+    if len(message.command) == 2 and message.command[1] in ["subscribe", "error", "okay", "help", "verify"]:
         if message.command[1] == "verify":
             if not await check_verification(client, message.from_user.id):
                 btn = [[
@@ -370,41 +358,6 @@ async def start(client, message):
                 text="<b>Invalid link or Expired link !</b>",
                 protect_content=False
             )
-        # Check if premium user or already verified - exempt from bypass detection
-        is_premium = await db.has_premium_access(message.from_user.id)
-        is_verified = await check_verification(client, message.from_user.id)
-
-        if not is_premium and not is_verified:
-            # Bypass detection for normal users
-            start_time = await db.get_verification_start_time(userid)
-            time_taken = time.time() - start_time
-
-            if time_taken < 120:
-                # Bypass attempt detected
-                await db.temp_ban_user(userid, 60)
-                await message.reply_text(
-                    text="<b>Bypass detected. You are temporarily banned for 60 seconds. If you are caught again, you may be permanently banned.</b>",
-                    protect_content=False,
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Support", url="https://t.me/death_movies")]])
-                )
-
-                # After 60 seconds, send a new link
-                async def send_new_link():
-                    await asyncio.sleep(60)
-                    new_verify_link = await get_token(client, userid, f"https://telegram.me/{temp.U_NAME}?start=", fileid)
-                    btn = [
-                        [InlineKeyboardButton("ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ᴠᴇʀɪғʏ", url=new_verify_link)],
-                        [InlineKeyboardButton("Support", url="https://t.me/death_movies")]
-                    ]
-                    await client.send_message(
-                        chat_id=userid,
-                        text="<b>Your temporary ban has expired. Here is your new verification link:</b>",
-                        reply_markup=InlineKeyboardMarkup(btn)
-                    )
-
-                asyncio.create_task(send_new_link())
-                return
-
         is_valid = await check_token(client, userid, token)
         if is_valid == True:
             if fileid != "none":

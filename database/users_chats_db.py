@@ -277,26 +277,6 @@ class Database:
             upsert=True
         )
 
-    async def update_verification_start_time(self, user_id, timestamp):
-        await self.col.update_one({'id': int(user_id)}, {'$set': {'verification_start_time': timestamp}})
-
-    async def get_verification_start_time(self, user_id):
-        user = await self.col.find_one({'id': int(user_id)})
-        if user:
-            return user.get('verification_start_time', 0)
-        return 0
-
-    async def temp_ban_user(self, user_id, duration):
-        expiry = datetime.datetime.now() + datetime.timedelta(seconds=duration)
-        await self.col.update_one({'id': int(user_id)}, {'$set': {'temp_ban_expiry': expiry}})
-
-    async def is_user_temp_banned(self, user_id):
-        user = await self.col.find_one({'id': int(user_id)})
-        if user:
-            expiry = user.get('temp_ban_expiry')
-            if expiry and datetime.datetime.now() < expiry:
-                return True
-        return False
 
     async def add_verify_token(self, user_id, token, short_link):
         try:
